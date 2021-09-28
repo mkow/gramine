@@ -1,9 +1,11 @@
 pal_linux_common_sources = [
     'bogomips.c',
+    'command.c',
     'debug_map.c',
     'file_utils.c',
     'gramine_unix_socket_addr.c',
     'main_exec_path.c',
+    'proc_maps.c',
     'timespec_utils.c',
     'topo_info.c',
 ]

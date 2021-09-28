@@ -13,6 +13,8 @@
 #ifndef DEBUG_MAP_H
 #define DEBUG_MAP_H
 
+#include <stdint.h>
+
 struct debug_map {
     char* name;
     void* addr;
@@ -27,5 +29,9 @@ void debug_map_update_debugger(void);
 
 int debug_map_add(const char* name, void* addr);
 int debug_map_remove(void* addr);
+
+/* Try to describe code location. Looks up the right debug map and runs `addr2line` in a
+ * subprocess. */
+int debug_describe_location(void* addr, char* buf, size_t buf_size);
 
 #endif /* DEBUG_MAP_H */

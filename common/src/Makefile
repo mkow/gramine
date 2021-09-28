@@ -101,6 +101,7 @@ $(filter-out crypto/mbedtls/library/aes.c,$(patsubst %.o,%.c,$(crypto_mbedtls_li
 
 objs += \
 	avl_tree.o \
+	location.o \
 	network/hton.o \
 	network/inet_pton.o \
 	path.o \
@@ -108,6 +109,7 @@ objs += \
 	stdlib/printfmt.o \
 	string/atoi.o \
 	string/ctype.o \
+	string/memchr.o \
 	string/memcmp.o \
 	string/memcpy.o \
 	string/memset.o \

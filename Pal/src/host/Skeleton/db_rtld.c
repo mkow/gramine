@@ -10,3 +10,10 @@
 void _DkDebugMapAdd(const char* name, void* addr) {}
 
 void _DkDebugMapRemove(void* addr) {}
+
+int _DkDebugDescribeLocation(void* addr, char* buf, size_t buf_size) {
+    __UNUSED(addr);
+    __UNUSED(buf);
+    __UNUSED(buf_size);
+    return -ENOSYS;
+}

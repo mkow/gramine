@@ -100,6 +100,7 @@ def get_enclave_attributes(manifest):
         'XFRM_AVX512': struct.pack('<Q', offs.SGX_XFRM_AVX512),
         'XFRM_MPX': struct.pack('<Q', offs.SGX_XFRM_MPX),
         'XFRM_PKRU': struct.pack('<Q', offs.SGX_XFRM_PKRU),
+        'XFRM_AMX': struct.pack('<Q', offs.SGX_XFRM_AMX),
     }
 
     sgx_miscs = {
@@ -112,6 +113,7 @@ def get_enclave_attributes(manifest):
         ('require_avx512', 'XFRM_AVX512'),
         ('require_mpx', 'XFRM_MPX'),
         ('require_pkru', 'XFRM_PKRU'),
+        ('require_amx', 'XFRM_AMX'),
         ('support_exinfo', 'MISC_EXINFO'),
     ]
 
@@ -706,6 +708,7 @@ def read_manifest(path):
     sgx.setdefault('require_avx512', False)
     sgx.setdefault('require_mpx', False)
     sgx.setdefault('require_pkru', False)
+    sgx.setdefault('require_amx', False)
     sgx.setdefault('support_exinfo', False)
     sgx.setdefault('nonpie_binary', False)
     sgx.setdefault('enable_stats', False)

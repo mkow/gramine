@@ -20,6 +20,7 @@ def set_optional_sgx_features(attr):
         offs.SGX_XFRM_AVX512:   'avx512f',
         offs.SGX_XFRM_MPX:      'mpx',
         offs.SGX_XFRM_PKRU:     'pku', # "pku" is not a typo, that's how cpuinfo reports it
+        offs.SGX_XFRM_AMX:      'amx_bf16',
     }
 
     cpu_features = ''

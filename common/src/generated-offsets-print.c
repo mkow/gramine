@@ -20,9 +20,7 @@ static void print_offsets_h(void) {
 
     const struct generated_offset* gen;
     for (gen = &generated_offsets[0]; gen->name; gen++) {
-        printf("#ifndef %s\n", gen->name);
         printf("#define %s %zu\n", gen->name, gen->offset);
-        printf("#endif\n");
     }
 
     printf("\n");

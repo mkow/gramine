@@ -15,9 +15,8 @@ sgx_inc = [
 ]
 
 cflags_pal_sgx = [
-    '-DIN_PAL',
+    cflags_pal_common,
     '-DHOST_TYPE=Linux-SGX',
-    '-fno-builtin',
     # Some of the code uses `alignof` on expressions, which is a GNU extension. Silence Clang - it
     # complains but does support it.
     '-Wno-gnu-alignof-expression',
@@ -27,10 +26,7 @@ pal_sgx_generated_offsets_print = executable('pal-sgx-generated-offsets-print',
     'generated-offsets.c',
     generated_offsets_print_src,
     include_directories: sgx_inc,
-    c_args: [
-        # no `cflags_pal_common`: we can't use custom stack protector or sanitizers
-        cflags_pal_sgx,
-    ],
+    c_args: cflags_pal_sgx,
 )
 
 pal_sgx_asm_offsets_h = custom_target('asm-offsets.h[pal-sgx]',
@@ -91,8 +87,9 @@ libpal_sgx = shared_library('pal',
     include_directories: sgx_inc,
 
     c_args: [
-        cflags_pal_common,
         cflags_pal_sgx,
+        cflags_custom_stack_protector,
+        cflags_sanitizers,
         '-DIN_ENCLAVE',
     ],
 
@@ -143,8 +140,8 @@ executable('loader',
 
     include_directories: sgx_inc,
     c_args: [
-        cflags_sanitizers,
         cflags_pal_sgx,
+        cflags_sanitizers,
         # URTS uses stack protector with standard parameters (not the ones defined for Pal/LibOS)
         '-fstack-protector-strong',
     ],

@@ -28,7 +28,7 @@ pal_sgx_generated_offsets_print = executable('pal-sgx-generated-offsets-print',
     generated_offsets_print_src,
     include_directories: sgx_inc,
     c_args: [
-        cflags_pal_common,
+        # no `cflags_pal_common`: we can't use custom stack protector or sanitizers
         cflags_pal_sgx,
     ],
 )

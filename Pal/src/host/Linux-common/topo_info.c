@@ -133,16 +133,16 @@ out:
     return num_dirs ?: -ENOENT;
 }
 
-static int get_cache_topo_info(int num_cache_lvl, int core_idx, PAL_CORE_CACHE_INFO** cache_info) {
+static int get_cache_topo_info(int cache_lvl_cnt, int core_idx, PAL_CORE_CACHE_INFO** cache_info) {
     int ret;
     char filename[128];
-    PAL_CORE_CACHE_INFO* core_cache = (PAL_CORE_CACHE_INFO*)malloc(num_cache_lvl *
+    PAL_CORE_CACHE_INFO* core_cache = (PAL_CORE_CACHE_INFO*)malloc(cache_lvl_cnt *
                                                                    sizeof(PAL_CORE_CACHE_INFO));
     if (!core_cache) {
         return -ENOMEM;
     }
 
-    for (int lvl = 0; lvl < num_cache_lvl; lvl++) {
+    for (int lvl = 0; lvl < cache_lvl_cnt; lvl++) {
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%d/cache/index%d/shared_cpu_map", core_idx, lvl);
         READ_FILE_BUFFER(filename, core_cache[lvl].shared_cpu_map, /*failure_label=*/out_cache);
@@ -195,10 +195,10 @@ static int get_core_topo_info(PAL_TOPO_INFO* topo_info) {
     if (online_logical_cores < 0)
         return online_logical_cores;
 
-    int num_cache_lvl = get_num_cache_level("/sys/devices/system/cpu/cpu0/cache");
-    if (num_cache_lvl < 0)
-        return num_cache_lvl;
-    topo_info->num_cache_index = num_cache_lvl;
+    int cache_lvl_cnt = get_num_cache_level("/sys/devices/system/cpu/cpu0/cache");
+    if (cache_lvl_cnt < 0)
+        return cache_lvl_cnt;
+    topo_info->cache_index_cnt = cache_lvl_cnt;
 
     PAL_CORE_TOPO_INFO* core_topology = (PAL_CORE_TOPO_INFO*)malloc(online_logical_cores *
                                                                     sizeof(PAL_CORE_TOPO_INFO));
@@ -227,7 +227,7 @@ static int get_core_topo_info(PAL_TOPO_INFO* topo_info) {
         READ_FILE_BUFFER(filename, core_topology[idx].thread_siblings,
                          /*failure_label=*/out_topology);
 
-        ret = get_cache_topo_info(num_cache_lvl, idx, &core_topology[idx].cache);
+        ret = get_cache_topo_info(cache_lvl_cnt, idx, &core_topology[idx].cache);
         if (ret < 0)
             goto out_topology;
     }
@@ -249,7 +249,7 @@ static int get_numa_topo_info(PAL_TOPO_INFO* topo_info) {
     int num_nodes = get_hw_resource("/sys/devices/system/node/online", /*count=*/true);
     if (num_nodes < 0)
         return num_nodes;
-    topo_info->num_online_nodes = num_nodes;
+    topo_info->online_nodes_cnt = num_nodes;
 
     PAL_NUMA_TOPO_INFO* numa_topology = (PAL_NUMA_TOPO_INFO*)malloc(num_nodes *
                                                                     sizeof(PAL_NUMA_TOPO_INFO));

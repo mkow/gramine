@@ -14,7 +14,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
+#include "pal_state.h"
 
 extern struct atomic_int g_allocated_pages;
 
@@ -92,10 +92,10 @@ int _DkVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
 }
 
 uint64_t _DkMemoryQuota(void) {
-    return g_pal_sec.heap_max - g_pal_sec.heap_min;
+    return g_pal_state.heap_max - g_pal_state.heap_min;
 }
 
 uint64_t _DkMemoryAvailableQuota(void) {
-    return (g_pal_sec.heap_max - g_pal_sec.heap_min) -
+    return (g_pal_state.heap_max - g_pal_state.heap_min) -
            __atomic_load_n(&g_allocated_pages.counter, __ATOMIC_SEQ_CST) * g_page_size;
 }

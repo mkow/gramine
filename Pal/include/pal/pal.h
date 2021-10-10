@@ -19,6 +19,8 @@
 #include "cpu.h"
 #endif
 
+#include "topology.h"
+
 /* TODO: we should `#include "toml.h"` here. However, this is currently inconvenient to do in Meson,
  * because `toml.h` is a generated (patched) file, and all targets built using `pal.h` would need to
  * declare a dependency on it. */

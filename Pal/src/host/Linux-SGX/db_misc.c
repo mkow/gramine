@@ -20,7 +20,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_defs.h"
-#include "pal_security.h"
+#include "pal_state.h"
 #include "seqlock.h"
 #include "sgx_api.h"
 #include "sgx_attest.h"
@@ -185,7 +185,7 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
  * through xfrm what extensions are enabled inside the enclave.
  */
 static void sanity_check_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
-    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
+    uint64_t xfrm = g_pal_state.enclave_info.attributes.xfrm;
 
     if (leaf == EXTENDED_STATE_LEAF) {
         switch (subleaf) {
@@ -386,7 +386,7 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 };
 
 int _DkCpuIdRetrieve(unsigned int leaf, unsigned int subleaf, unsigned int values[4]) {
-    uint64_t xfrm = g_pal_sec.enclave_info.attributes.xfrm;
+    uint64_t xfrm = g_pal_state.enclave_info.attributes.xfrm;
 
     /* A few basic leaves are considered reserved and always return zeros; see corresponding EAX
      * cases in the "Operation" section of CPUID description in Intel SDM, Vol. 2A, Chapter 3.2.
@@ -531,7 +531,8 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
 
     /* read sgx.ra_client_spid from manifest (must be hex string) */
     char* ra_client_spid_str = NULL;
-    ret = toml_string_in(g_pal_state.manifest_root, "sgx.ra_client_spid", &ra_client_spid_str);
+    ret = toml_string_in(g_pal_common_state.manifest_root, "sgx.ra_client_spid",
+                         &ra_client_spid_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.ra_client_spid'");
         return -PAL_ERROR_INVAL;
@@ -565,7 +566,7 @@ int _DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_s
         }
 
         /* read sgx.ra_client_linkable from manifest */
-        ret = toml_bool_in(g_pal_state.manifest_root, "sgx.ra_client_linkable",
+        ret = toml_bool_in(g_pal_common_state.manifest_root, "sgx.ra_client_linkable",
                            /*defaultval=*/false, &linkable);
         if (ret < 0) {
             log_error("Cannot parse 'sgx.ra_client_linkable' (the value must be `true` or "
@@ -767,9 +768,9 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     brand[BRAND_SIZE - 1] = '\0';
     ci->cpu_brand = brand;
 
-    ci->online_logical_cores = g_pal_sec.online_logical_cores;
-    ci->physical_cores_per_socket = g_pal_sec.physical_cores_per_socket;
-    ci->cpu_socket = g_pal_sec.cpu_socket;
+    ci->online_logical_cores = g_topo_info.online_logical_cores;
+    ci->physical_cores_per_socket = g_topo_info.physical_cores_per_socket;
+    ci->cpu_to_socket = g_topo_info.cpu_to_socket;
 
     _DkCpuIdRetrieve(1, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX],  8, 12) +
@@ -834,13 +835,13 @@ int _DkGetTopologyInfo(PAL_TOPO_INFO* topo_info) {
         return 0;
     }
 
-    topo_info->num_online_nodes = g_pal_sec.topo_info.num_online_nodes;
-    topo_info->num_cache_index  = g_pal_sec.topo_info.num_cache_index;
-    topo_info->core_topology    = g_pal_sec.topo_info.core_topology;
-    topo_info->numa_topology    = g_pal_sec.topo_info.numa_topology;
-    COPY_ARRAY(topo_info->online_logical_cores, g_pal_sec.topo_info.online_logical_cores);
-    COPY_ARRAY(topo_info->possible_logical_cores, g_pal_sec.topo_info.possible_logical_cores);
-    COPY_ARRAY(topo_info->online_nodes, g_pal_sec.topo_info.online_nodes);
+    topo_info->online_nodes_cnt = g_topo_info.online_nodes_cnt;
+    topo_info->cache_index_cnt  = g_topo_info.cache_index_cnt;
+    topo_info->core_topology    = g_topo_info.core_topology;
+    topo_info->numa_topology    = g_topo_info.numa_topology;
+    COPY_ARRAY(topo_info->online_logical_cores, g_pal_state.topo_info.online_logical_cores);
+    COPY_ARRAY(topo_info->possible_logical_cores, g_pal_state.topo_info.possible_logical_cores);
+    COPY_ARRAY(topo_info->online_nodes, g_pal_state.topo_info.online_nodes);
     return 0;
 }
 

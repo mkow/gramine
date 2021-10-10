@@ -6,7 +6,7 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_security.h"
+#include "pal_state.h"
 #include "spinlock.h"
 
 struct atomic_int g_allocated_pages;
@@ -75,8 +75,8 @@ static void __free_vma(struct heap_vma* vma) {
 }
 
 void init_enclave_pages(void) {
-    g_heap_bottom = g_pal_sec.heap_min;
-    g_heap_top    = g_pal_sec.heap_max;
+    g_heap_bottom = g_pal_state.heap_min;
+    g_heap_top    = g_pal_state.heap_max;
 }
 
 static void* __create_vma_and_merge(void* addr, size_t size, bool is_pal_internal,

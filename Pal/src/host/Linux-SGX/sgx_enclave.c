@@ -22,7 +22,6 @@
 #include "linux_utils.h"
 #include "ocall_types.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
 #include "rpc_queue.h"
 #include "sgx_internal.h"
 #include "sgx_log.h"
@@ -855,8 +854,9 @@ static int start_rpc(size_t num_of_threads) {
     return 0;
 }
 
-int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env,
-                        size_t env_size, int parent_stream_fd) {
+int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* env, size_t env_size,
+                        int parent_stream_fd, int host_euid, int host_egid,
+                        sgx_target_info_t* qe_targetinfo, struct PAL_TOPO_INFO* topo_info) {
     g_rpc_queue = NULL;
 
     if (g_pal_enclave.rpc_thread_num > 0) {
@@ -876,7 +876,10 @@ int ecall_enclave_start(char* libpal_uri, char* args, size_t args_size, char* en
     ms.ms_env              = env;
     ms.ms_env_size         = env_size;
     ms.ms_parent_stream_fd = parent_stream_fd;
-    ms.ms_sec_info         = &g_pal_enclave.pal_sec;
+    ms.ms_qe_targetinfo    = qe_targetinfo;
+    ms.ms_host_euid        = host_euid;
+    ms.ms_host_egid        = host_egid;
+    ms.ms_topo_info        = topo_info;
     ms.rpc_queue           = g_rpc_queue;
     EDEBUG(ECALL_ENCLAVE_START, &ms);
     return sgx_ecall(ECALL_ENCLAVE_START, &ms);

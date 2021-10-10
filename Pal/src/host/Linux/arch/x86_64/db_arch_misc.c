@@ -147,8 +147,8 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     ci->physical_cores_per_socket = core_siblings / smt_siblings;
 
     /* array of "logical core -> socket" mappings */
-    int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
-    if (!cpu_socket) {
+    int* cpu_to_socket = (int*)malloc(online_logical_cores * sizeof(int));
+    if (!cpu_to_socket) {
         rv = -PAL_ERROR_NOMEM;
         goto out_brand;
     }
@@ -157,14 +157,14 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
     for (int idx = 0; idx < online_logical_cores; idx++) {
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", idx);
-        cpu_socket[idx] = get_hw_resource(filename, /*count=*/false);
-        if (cpu_socket[idx] < 0) {
+        cpu_to_socket[idx] = get_hw_resource(filename, /*count=*/false);
+        if (cpu_to_socket[idx] < 0) {
             log_warning("Cannot read %s", filename);
-            rv = unix_to_pal_error(cpu_socket[idx]);
+            rv = unix_to_pal_error(cpu_to_socket[idx]);
             goto out_phy_id;
         }
     }
-    ci->cpu_socket = cpu_socket;
+    ci->cpu_to_socket = cpu_to_socket;
 
     cpuid(1, 0, words);
     ci->cpu_family   = BIT_EXTRACT_LE(words[CPUID_WORD_EAX], 8, 12);
@@ -219,7 +219,7 @@ int _DkGetCPUInfo(PAL_CPU_INFO* ci) {
 out_flags:
     free(flags);
 out_phy_id:
-    free(cpu_socket);
+    free(cpu_to_socket);
 out_brand:
     free(brand);
 out_vendor_id:

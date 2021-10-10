@@ -245,8 +245,7 @@ noreturn void _DkThreadExit(int* clear_child_tid) {
 }
 
 int _DkThreadResume(PAL_HANDLE thread_handle) {
-    int ret = DO_SYSCALL(tgkill, g_linux_state.pid, thread_handle->thread.tid, SIGCONT);
-
+    int ret = DO_SYSCALL(tgkill, g_pal_state.pid, thread_handle->thread.tid, SIGCONT);
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 

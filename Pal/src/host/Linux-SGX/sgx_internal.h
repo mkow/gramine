@@ -12,7 +12,7 @@
 
 #include "api.h"
 #include "pal_linux.h"
-#include "pal_security.h"
+#include "pal_state.h"
 #include "sgx_syscall.h"
 #include "toml.h"
 
@@ -70,7 +70,7 @@ struct pal_enclave {
 #endif
 
     /* security information */
-    struct pal_sec pal_sec;
+    // struct pal_sec pal_sec;
 };
 
 extern struct pal_enclave g_pal_enclave;

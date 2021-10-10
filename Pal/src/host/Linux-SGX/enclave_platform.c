@@ -4,17 +4,18 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
-#include "pal_security.h"
+#include "pal_state.h"
 
 int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,
                   size_t* quote_len) {
     /* must align all arguments to sgx_report() so that EREPORT doesn't complain */
     __sgx_mem_aligned sgx_report_t report;
-    __sgx_mem_aligned sgx_target_info_t targetinfo = g_pal_sec.qe_targetinfo;
     __sgx_mem_aligned sgx_report_data_t _report_data = *report_data;
 
-    int ret = sgx_report(&targetinfo, &_report_data, &report);
+    /* Quoting Enclave targetinfo we have is untrusted, but worst case the host will just won't be
+     * able to attest our enclave if this data is wrong. */
+    int ret = sgx_report(&g_pal_state.untrusted_qe_targetinfo, &_report_data, &report);
     if (ret) {
         log_error("Failed to get enclave report");
         return -PAL_ERROR_DENIED;

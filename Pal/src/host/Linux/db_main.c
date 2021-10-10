@@ -31,7 +31,7 @@ char* g_pal_loader_path = NULL;
  * - this is to keep uniformity with other PALs. */
 char* g_libpal_path = NULL;
 
-struct pal_linux_state g_linux_state;
+struct pal_state g_pal_state;
 
 /* for internal PAL objects, Gramine first uses pre-allocated g_mem_pool and then falls back to
  * _DkVirtualMemoryAlloc(PAL_ALLOC_INTERNAL); the amount of available PAL internal memory is limited
@@ -41,7 +41,6 @@ char* g_pal_internal_mem_addr = NULL;
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
-static int g_host_euid, g_host_egid;
 static ElfW(Addr) g_sysinfo_ehdr;
 
 static void read_args_from_stack(void* initial_rsp, int* out_argc, const char*** out_argv,
@@ -79,11 +78,11 @@ static void read_args_from_stack(void* initial_rsp, int* out_argc, const char***
                 }
                 break;
             case AT_EUID:
-                g_host_euid = av->a_un.a_val;
+                g_pal_common_state.host_euid = av->a_un.a_val;
                 host_euid_set = true;
                 break;
             case AT_EGID:
-                g_host_egid = av->a_un.a_val;
+                g_pal_common_state.host_egid = av->a_un.a_val;
                 host_egid_set = true;
                 break;
             case AT_SYSINFO_EHDR:
@@ -110,10 +109,10 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
         if (start_addr >= end_addr)
             INIT_FAIL(PAL_ERROR_NOMEM, "no user memory available");
 
-        void* mem = (void*)DO_SYSCALL(mmap, start_addr, g_pal_state.alloc_align, PROT_NONE,
+        void* mem = (void*)DO_SYSCALL(mmap, start_addr, g_pal_common_state.alloc_align, PROT_NONE,
                                       MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if (!IS_PTR_ERR(mem)) {
-            DO_SYSCALL(munmap, mem, g_pal_state.alloc_align);
+            DO_SYSCALL(munmap, mem, g_pal_common_state.alloc_align);
             if (mem == start_addr)
                 break;
         }
@@ -190,8 +189,10 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     call_init_array();
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
-    g_pal_state.alloc_align = g_page_size;
-    assert(IS_POWER_OF_2(g_pal_state.alloc_align));
+    g_pal_common_state.alloc_align = g_page_size;
+    assert(IS_POWER_OF_2(g_pal_common_state.alloc_align));
+
+    init_random();
 
     ret = init_random();
     if (ret < 0)
@@ -232,7 +233,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         }
     }
 
-    g_linux_state.host_environ = envp;
+    g_pal_state.host_environ = envp;
 
     /* Prepare an initial memory pool for the slab allocator. This is necessary because we cannot
      * allocate the PAL-internal range yet: we need to parse the manifest to know its size. */
@@ -330,10 +331,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
         log_warning("vvar address range not preloaded, is your system missing vvar?!");
     }
 
-    g_linux_state.pid = DO_SYSCALL(getpid);
-    g_linux_state.uid = g_host_euid;
-    g_linux_state.gid = g_host_egid;
-
+    g_pal_state.pid = DO_SYSCALL(getpid);
     PAL_HANDLE parent = NULL;
     char* manifest = NULL;
     uint64_t instance_id = 0;
@@ -358,14 +356,14 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
      * initialized. */
     signal_setup(first_process, g_vdso_start, g_vdso_end);
 
-    g_pal_state.raw_manifest_data = manifest;
+    g_pal_common_state.raw_manifest_data = manifest;
 
     char errbuf[256];
-    g_pal_state.manifest_root = toml_parse(manifest, errbuf, sizeof(errbuf));
-    if (!g_pal_state.manifest_root)
+    g_pal_common_state.manifest_root = toml_parse(manifest, errbuf, sizeof(errbuf));
+    if (!g_pal_common_state.manifest_root)
         INIT_FAIL_MANIFEST(PAL_ERROR_DENIED, errbuf);
 
-    ret = toml_sizestring_in(g_pal_state.manifest_root, "loader.pal_internal_mem_size",
+    ret = toml_sizestring_in(g_pal_common_state.manifest_root, "loader.pal_internal_mem_size",
                              /*defaultval=*/g_page_size, &g_pal_internal_mem_size);
     if (ret < 0) {
         INIT_FAIL(PAL_ERROR_INVAL, "Cannot parse 'loader.pal_internal_mem_size'");

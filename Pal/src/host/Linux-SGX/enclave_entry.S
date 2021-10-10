@@ -615,7 +615,7 @@ sgx_ocall:
 	.cfi_startproc
 	# Clear "extended" state (FPU aka x87, SSE, AVX, ...).
 
-	# g_pal_sec.enclave_attributes.xfrm will always be zero before
+	# g_pal_state.enclave_attributes.xfrm will always be zero before
 	# init_enclave has been called by pal_linux_main. So during early init
 	# nothing should use features not covered by fxrstor, like AVX.
 

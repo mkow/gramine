@@ -186,7 +186,7 @@ typedef ptrdiff_t ssize_t;
     } while (0)
 #define static_strlen(str) (ARRAY_SIZE(FORCE_LITERAL_CSTR(str)) - 1)
 
-#define IS_IN_RANGE_INCL(value, start, end) (((value) < (start) || (value) > (end)) ? false : true)
+#define IS_IN_RANGE_INCL(value, start, end) ((start) <= (value) && (value) <= (end))
 
 /* LibC functions */
 

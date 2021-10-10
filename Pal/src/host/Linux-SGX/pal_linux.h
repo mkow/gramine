@@ -31,12 +31,21 @@
 #include "sgx_syscall.h"
 #include "sgx_tls.h"
 
-extern struct pal_linux_state {
-    const char** host_environ;
+// extern struct pal_linux_state {
 
-    /* credentials */
-    unsigned int uid, gid;
-} g_linux_state;
+//     /* credentials */
+//     
+// } g_linux_state;
+
+extern struct pal_state {
+    const char** host_environ;
+    void* heap_min;
+    void* heap_max;
+    /* Thread creation ECALL is allowed only after this is set. */
+    bool enclave_initialized;
+    __sgx_mem_aligned sgx_target_info_t untrusted_qe_targetinfo; /* Quoting Enclave targetinfo */
+    sgx_report_body_t enclave_info;
+} g_pal_state;
 
 #define ACCESS_R 4
 #define ACCESS_W 2
@@ -45,7 +54,8 @@ extern struct pal_linux_state {
 struct stat;
 bool stataccess(struct stat* stats, int acc);
 
-int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent, uint64_t* out_instance_id);
+int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
+                       uint64_t* out_instance_id_ptr);
 
 #ifdef IN_ENCLAVE
 
@@ -58,7 +68,9 @@ extern size_t g_pal_internal_mem_size;
 struct pal_sec;
 noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char* uptr_args,
                              size_t args_size, char* uptr_env, size_t env_size,
-                             int parent_stream_fd, struct pal_sec* uptr_sec_info);
+                             int parent_stream_fd, int host_euid, int host_egid,
+                             sgx_target_info_t* uptr_qe_targetinfo,
+                             PAL_TOPO_INFO* uptr_topo_info);
 void pal_start_thread(void);
 
 extern char __text_start, __text_end, __data_start, __data_end;

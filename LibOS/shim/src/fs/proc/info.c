@@ -122,7 +122,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("model\t\t: %lu\n", g_pal_control->cpu_info.cpu_model);
         ADD_INFO("model name\t: %s\n", g_pal_control->cpu_info.cpu_brand);
         ADD_INFO("stepping\t: %lu\n", g_pal_control->cpu_info.cpu_stepping);
-        ADD_INFO("physical id\t: %d\n", g_pal_control->cpu_info.cpu_socket[n]);
+        ADD_INFO("physical id\t: %d\n", g_pal_control->cpu_info.cpu_to_socket[n]);
         ADD_INFO("core id\t\t: %lu\n", n);
         ADD_INFO("cpu cores\t: %lu\n", g_pal_control->cpu_info.physical_cores_per_socket);
         double bogomips = g_pal_control->cpu_info.cpu_bogomips;

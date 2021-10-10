@@ -6,7 +6,7 @@
 #include "ecall_types.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_security.h"
+#include "pal_state.h"
 #include "rpc_queue.h"
 #include "sgx_arch.h"
 
@@ -94,11 +94,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
             return;
         }
 
-        if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)))
-            return;
-
-        struct pal_sec* pal_sec = READ_ONCE(ms->ms_sec_info);
-        if (!pal_sec || !sgx_is_completely_outside_enclave(pal_sec, sizeof(*pal_sec)))
+        if (verify_and_init_rpc_queue(READ_ONCE(ms->rpc_queue)) < 0)
             return;
 
         /* xsave size must be initialized early, from a trusted source (EREPORT result) */
@@ -115,7 +111,9 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         /* pal_linux_main is responsible for checking the passed arguments */
         pal_linux_main(READ_ONCE(ms->ms_libpal_uri), READ_ONCE(ms->ms_libpal_uri_len),
                        READ_ONCE(ms->ms_args), READ_ONCE(ms->ms_args_size), READ_ONCE(ms->ms_env),
-                       READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd), pal_sec);
+                       READ_ONCE(ms->ms_env_size), READ_ONCE(ms->ms_parent_stream_fd), 
+                       READ_ONCE(ms->ms_host_euid), READ_ONCE(ms->ms_host_egid),
+                       READ_ONCE(ms->ms_qe_targetinfo), READ_ONCE(ms->ms_topo_info));
     } else {
         // ENCLAVE_START already called (maybe successfully, maybe not), so
         // only valid ecall is THREAD_START.
@@ -124,7 +122,7 @@ void handle_ecall(long ecall_index, void* ecall_args, void* exit_target, void* e
         }
 
         // Only allow THREAD_START after successful enclave initialization.
-        if (!g_pal_sec.enclave_initialized) {
+        if (!g_pal_state.enclave_initialized) {
             return;
         }
 

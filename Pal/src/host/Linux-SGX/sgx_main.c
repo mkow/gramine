@@ -887,7 +887,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
-    struct pal_sec* pal_sec = &enclave->pal_sec;
+    PAL_TOPO_INFO topo_info;
 
     uint64_t start_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
@@ -906,22 +906,19 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (!is_wrfsbase_supported())
         return -EPERM;
 
-    pal_sec->uid = DO_SYSCALL(getuid);
-    pal_sec->gid = DO_SYSCALL(getgid);
-
     /* we cannot use CPUID(0xb) because it counts even disabled-by-BIOS cores (e.g. HT cores);
      * instead extract info on total number of logical cores, number of physical cores,
      * SMT support etc. by parsing sysfs pseudo-files */
     int online_logical_cores = get_hw_resource("/sys/devices/system/cpu/online", /*count=*/true);
     if (online_logical_cores < 0)
         return online_logical_cores;
-    pal_sec->online_logical_cores = online_logical_cores;
+    topo_info.online_logical_cores = online_logical_cores;
 
     int possible_logical_cores = get_hw_resource("/sys/devices/system/cpu/possible",
                                                  /*count=*/true);
     if (possible_logical_cores < 0)
         return possible_logical_cores;
-    pal_sec->possible_logical_cores = possible_logical_cores;
+    topo_info.possible_logical_cores_cnt = possible_logical_cores;
 
     /* TODO: correctly support offline cores */
     if (possible_logical_cores > 0 && possible_logical_cores > online_logical_cores) {
@@ -938,28 +935,28 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                                        /*count=*/true);
     if (smt_siblings < 0)
         return smt_siblings;
-    pal_sec->physical_cores_per_socket = core_siblings / smt_siblings;
+    topo_info.physical_cores_per_socket = core_siblings / smt_siblings;
 
     /* array of "logical core -> socket" mappings */
-    int* cpu_socket = (int*)malloc(online_logical_cores * sizeof(int));
-    if (!cpu_socket)
+    int* cpu_to_socket = (int*)malloc(online_logical_cores * sizeof(int));
+    if (!cpu_to_socket)
         return -ENOMEM;
 
     char filename[128];
     for (int idx = 0; idx < online_logical_cores; idx++) {
         snprintf(filename, sizeof(filename),
                  "/sys/devices/system/cpu/cpu%d/topology/physical_package_id", idx);
-        cpu_socket[idx] = get_hw_resource(filename, /*count=*/false);
-        if (cpu_socket[idx] < 0) {
+        cpu_to_socket[idx] = get_hw_resource(filename, /*count=*/false);
+        if (cpu_to_socket[idx] < 0) {
             log_error("Cannot read %s", filename);
-            ret = cpu_socket[idx];
-            free(cpu_socket);
+            ret = cpu_to_socket[idx];
+            free(cpu_to_socket);
             return ret;
         }
     }
-    pal_sec->cpu_socket = cpu_socket;
+    topo_info.cpu_to_socket = cpu_to_socket;
 
-    ret = get_topology_info(&pal_sec->topo_info);
+    ret = get_topology_info(&topo_info);
     if (ret < 0)
         return ret;
 
@@ -1010,13 +1007,16 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     if (ret < 0)
         return ret;
 
+    sgx_target_info_t qe_targetinfo;
     if (enclave->remote_attestation_enabled) {
         /* initialize communication with Quoting Enclave only if app requests attestation */
         bool is_epid = enclave->use_epid_attestation;
         log_debug("Using SGX %s attestation", is_epid ? "EPID" : "DCAP/ECDSA");
-        ret = init_quoting_enclave_targetinfo(is_epid, &pal_sec->qe_targetinfo);
+        ret = init_quoting_enclave_targetinfo(is_epid, &qe_targetinfo);
         if (ret < 0)
             return ret;
+    } else {
+        memset(&qe_targetinfo, 0, sizeof(qe_targetinfo));
     }
 
     void* alt_stack = (void*)DO_SYSCALL(mmap, NULL, ALT_STACK_SIZE, PROT_READ | PROT_WRITE,
@@ -1044,8 +1044,12 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                    end_time - start_time);
     }
 
+    int host_euid = DO_SYSCALL(geteuid);
+    int host_egid = DO_SYSCALL(getegid);
+
     /* start running trusted PAL */
-    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd);
+    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,
+                        host_euid, host_egid, &qe_targetinfo, &topo_info);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);

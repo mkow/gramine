@@ -493,7 +493,7 @@ long int ptrace(enum __ptrace_request request, ...) {
     int memdev;
     bool in_enclave;
     struct enclave_dbginfo* ei;
-    struct user userdata;
+    struct user userdata = { 0 };
 
     va_start(ap, request);
     tid  = va_arg(ap, pid_t);

@@ -364,7 +364,7 @@ enum pal_delete_mode {
 /*!
  * \brief Delete files or directories on the host or shut down the connection of TCP/UDP sockets.
  *
- * \param access which side to shut down (see #pal_delete values)
+ * \param access which side to shut down (see #pal_delete_mode values)
  */
 int DkStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 

@@ -438,7 +438,7 @@ static int pipe_close(PAL_HANDLE handle) {
  * \brief Shut down pipe (one or both ends in case of `pipeprv` depending on `access`).
  *
  * \param[in] handle       PAL handle of type `pipeprv`, `pipesrv`, `pipecli`, or `pipe`.
- * \param[in] delete_mode  See #pal_delete.
+ * \param[in] delete_mode  See #pal_delete_mode.
  * \return                 0 on success, negative PAL error code otherwise.
  */
 static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {

@@ -248,7 +248,7 @@ Flags used for stream manipulation
 .. doxygentypedef:: pal_stream_options_t
    :project: pal
 
-.. doxygenenum:: pal_delete
+.. doxygenenum:: pal_delete_mode
    :project: pal
 
 .. doxygentypedef:: pal_wait_flags_t

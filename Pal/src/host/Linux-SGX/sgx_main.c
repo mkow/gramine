@@ -884,7 +884,7 @@ out:
 /* Warning: This function does not free up resources on failure - it assumes that the whole process
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
-                        size_t env_size, bool need_gsgx) {
+                        size_t env_size, int parent_stream_fd, bool need_gsgx) {
     int ret;
     struct timeval tv;
     struct pal_sec* pal_sec = &enclave->pal_sec;
@@ -1045,7 +1045,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     }
 
     /* start running trusted PAL */
-    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size);
+    ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd);
 
     unmap_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
@@ -1142,7 +1142,7 @@ int main(int argc, char* argv[], char* envp[]) {
         print_usage_and_exit(argv[0]);
     }
 
-    g_pal_enclave.pal_sec.stream_fd = PAL_IDX_POISON;
+    int parent_pipe_fd = -1;
 
     if (first_process) {
         g_pal_enclave.is_first_process = true;
@@ -1166,9 +1166,8 @@ int main(int argc, char* argv[], char* envp[]) {
         g_pal_enclave.is_first_process = false;
 
         /* We'll receive our argv and config via IPC. */
-        int parent_pipe_fd = atoi(argv[3]);
-        ret = sgx_init_child_process(parent_pipe_fd, &g_pal_enclave.pal_sec,
-                                     &g_pal_enclave.application_path, &manifest);
+        parent_pipe_fd = atoi(argv[3]);
+        ret = sgx_init_child_process(parent_pipe_fd, &g_pal_enclave.application_path, &manifest);
         if (ret < 0)
             return ret;
     }
@@ -1196,7 +1195,7 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, need_gsgx);
+    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_pipe_fd, need_gsgx);
     if (ret < 0) {
         log_error("load_enclave() failed with error %d", ret);
     }

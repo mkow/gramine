@@ -129,13 +129,13 @@ out:
     return ret;
 }
 
-int sgx_init_child_process(int parent_pipe_fd, char** out_application_path, char** out_manifest) {
+int sgx_init_child_process(int parent_stream_fd, char** out_application_path, char** out_manifest) {
     int ret;
     struct proc_args proc_args;
     char* manifest = NULL;
     char* application_path = NULL;
 
-    ret = read_all(parent_pipe_fd, &proc_args, sizeof(struct proc_args));
+    ret = read_all(parent_stream_fd, &proc_args, sizeof(struct proc_args));
     if (ret < 0) {
         goto out;
     }
@@ -152,20 +152,20 @@ int sgx_init_child_process(int parent_pipe_fd, char** out_application_path, char
         goto out;
     }
 
-    ret = read_all(parent_pipe_fd, application_path, proc_args.application_path_size);
+    ret = read_all(parent_stream_fd, application_path, proc_args.application_path_size);
     if (ret < 0) {
         goto out;
     }
     application_path[proc_args.application_path_size] = '\0';
 
-    ret = read_all(parent_pipe_fd, manifest, proc_args.manifest_size);
+    ret = read_all(parent_stream_fd, manifest, proc_args.manifest_size);
     if (ret < 0) {
         goto out;
     }
     manifest[proc_args.manifest_size] = '\0';
 
     int child_status = 0;
-    ret = write_all(parent_pipe_fd, &child_status, sizeof(child_status));
+    ret = write_all(parent_stream_fd, &child_status, sizeof(child_status));
     if (ret < 0) {
         goto out;
     }

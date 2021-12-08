@@ -1065,7 +1065,7 @@ noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
                "\tFirst process: %s <path to libpal.so> init <application> args...\n"
-               "\tChildren:      %s <path to libpal.so> child <parent_pipe_fd> args...",
+               "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
     log_always("This is an internal interface. Use pal_loader to launch applications in "
                "Gramine.");
@@ -1142,7 +1142,7 @@ int main(int argc, char* argv[], char* envp[]) {
         print_usage_and_exit(argv[0]);
     }
 
-    int parent_pipe_fd = -1;
+    int parent_stream_fd = -1;
 
     if (first_process) {
         g_pal_enclave.is_first_process = true;
@@ -1166,8 +1166,8 @@ int main(int argc, char* argv[], char* envp[]) {
         g_pal_enclave.is_first_process = false;
 
         /* We'll receive our argv and config via IPC. */
-        parent_pipe_fd = atoi(argv[3]);
-        ret = sgx_init_child_process(parent_pipe_fd, &g_pal_enclave.application_path, &manifest);
+        parent_stream_fd = atoi(argv[3]);
+        ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest);
         if (ret < 0)
             return ret;
     }
@@ -1195,7 +1195,7 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_pipe_fd, need_gsgx);
+    ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd, need_gsgx);
     if (ret < 0) {
         log_error("load_enclave() failed with error %d", ret);
     }

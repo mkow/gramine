@@ -14,6 +14,122 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
+int sys_convert_int_to_sizestr(size_t val, enum size_multiplier size_mult, char* str,
+                               size_t buf_size) {
+    int ret = 0;
+
+    switch (size_mult) {
+        case MULTIPLIER_KB:
+            ret = snprintf(str, buf_size, "%zuK\n", val);
+            break;
+        case MULTIPLIER_MB:
+            ret = snprintf(str, buf_size, "%zuM\n", val);
+            break;
+        case MULTIPLIER_GB:
+            ret = snprintf(str, buf_size, "%zuG\n", val);
+            break;
+        default:
+            ret = snprintf(str, buf_size, "%zu\n", val);
+            break;
+    }
+
+    if ((size_t)ret >= buf_size)
+        ret = -EOVERFLOW;
+    return ret;
+}
+
+int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, char* str,
+                              size_t buf_size, const char* sep) {
+    size_t range_cnt = resource_range_info->range_cnt;
+    size_t offset = 0;
+    for (size_t i = 0; i < range_cnt; i++) {
+        if (offset > buf_size)
+            return -ENOMEM;
+
+        int ret;
+        if (resource_range_info->ranges_arr[i].end == resource_range_info->ranges_arr[i].start) {
+            ret = snprintf(str + offset, buf_size - offset, "%zu%s",
+                           resource_range_info->ranges_arr[i].start,
+                           (i + 1 == range_cnt) ? "\n" : sep);
+        } else {
+            ret = snprintf(str + offset, buf_size - offset, "%zu-%zu%s",
+                           resource_range_info->ranges_arr[i].start,
+                           resource_range_info->ranges_arr[i].end,
+                           (i + 1 == range_cnt) ? "\n" : sep);
+        }
+
+        if (ret < 0)
+            return ret;
+
+        /* Truncation has occurred */
+        if ((size_t)ret >= buf_size)
+            return -EOVERFLOW;
+
+        offset += ret;
+    }
+    return 0;
+}
+
+int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
+                                         char* str, size_t buf_size) {
+    int ret;
+
+    /* Extract cpumask from the ranges */
+    size_t possible_logical_cores_cnt =
+        g_pal_public_state->topo_info.possible_logical_cores.resource_cnt;
+    size_t cpumask_cnt = BITS_TO_INTS(possible_logical_cores_cnt);
+    uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
+    if (!bitmap)
+        return -ENOMEM;
+
+    for (size_t i = 0; i < resource_range_info->range_cnt; i++) {
+        size_t start = resource_range_info->ranges_arr[i].start;
+        size_t end = resource_range_info->ranges_arr[i].end;
+
+        for (size_t j = start; j <= end; j++) {
+            size_t index = j / BITS_IN_TYPE(int);
+            assert(index < cpumask_cnt);
+
+            bitmap[index] |= 1U << (j % BITS_IN_TYPE(int));
+        }
+    }
+
+    /* Convert cpumask to strings */
+    size_t offset = 0;
+    for (size_t j = cpumask_cnt; j > 0; j--) {
+        if (offset > buf_size) {
+            ret = -ENOMEM;
+            goto out;
+        }
+
+        /* Linux doesn't print leading zeroes for systems with less than 32 cores, e.g. "fff" for
+         * 12 cores; we mimic this behavior. */
+        if (possible_logical_cores_cnt >= 32) {
+            ret = snprintf(str + offset, buf_size - offset, "%08x%s", bitmap[j-1],
+                           (j-1 == 0) ? "\n" : ",");
+        } else {
+            ret = snprintf(str + offset, buf_size - offset, "%x%s", bitmap[j-1],
+                           (j-1 == 0) ? "\n" : ",");
+        }
+
+        if (ret < 0)
+            goto out;
+
+        /* Truncation has occurred */
+        if ((size_t)ret >= buf_size) {
+            ret = -EOVERFLOW;
+            goto out;
+        }
+
+        offset += ret;
+    }
+    ret = 0;
+
+out:
+    free(bitmap);
+    return ret;
+}
+
 static int sys_resource(struct shim_dentry* parent, const char* name, unsigned int* out_num,
                         readdir_callback_t callback, void* arg) {
     const char* parent_name = parent->name;
@@ -21,10 +137,10 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        total = g_pal_public_state->topo_info.online_nodes_cnt;
+        total = g_pal_public_state->topo_info.online_nodes.resource_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        total = g_pal_public_state->topo_info.online_logical_cores_cnt;
+        total = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
         total = g_pal_public_state->topo_info.cache_indices_cnt;

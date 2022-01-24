@@ -372,8 +372,8 @@ static int create_socket_range_from_core(struct pal_res_range_info* socket_info_
 
     if (socket_id != prev_socket_id) {
         socket_info_arr[socket_id].range_cnt++;
-        size_t new_size = sizeof(new_size) * socket_info_arr[socket_id].range_cnt;
-        size_t old_size = new_size - sizeof(old_size);
+        size_t new_size = sizeof(struct pal_range_info) * socket_info_arr[socket_id].range_cnt;
+        size_t old_size = new_size - sizeof(struct pal_range_info);
         struct pal_range_info* tmp = malloc(new_size);
         if (!tmp)
             return -1;

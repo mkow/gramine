@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2022 Intel Corporation
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
+ * Copyright (C) 2022 Intel Corporation
+ *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
  */
 
 #ifndef PAL_TOPOLOGY_H
@@ -12,6 +14,13 @@
 /* Used to represent cpumaps like "00000000,ffffffff,00000000,ffffffff".
  * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
 #define PAL_SYSFS_MAP_FILESZ 256
+
+/* Used to represent length of file/directory paths.
+ * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
+#define PAL_SYSFS_PATH_LEN 128
+
+#define MAX_HYPERTHREADS_PER_CORE 4
+#define MAX_CACHE_LEVELS          3
 
 enum {
     HUGEPAGES_2M = 0,
@@ -38,26 +47,25 @@ struct pal_range_info {
 };
 
 struct pal_res_range_info {
-    /* Count of total number of resources present. Eg. if output of `/sys/devices/system/cpu/online`
-     * were 0-15,21,32-63 then `resource_cnt` will be 49 */
+    /* Total number of resources present. Eg. if output of `/sys/devices/system/cpu/online` were
+     * 0-15,21,32-63 then `resource_cnt` will be 49 */
     size_t resource_cnt;
 
-    /* Count of total number of ranges present. Eg. if output of `/sys/devices/system/cpu/online`
-     * were 0-15,21,32-63 then `range_cnt` will be 3 */
+    /* Total number of ranges present. Eg. if output of `/sys/devices/system/cpu/online` were
+     * 0-15,21,32-63 then `range_cnt` will be 3 */
     size_t range_cnt;
 
-    /* Array to store each range and has `range_cnt` elements. Eg. if output of
-     * `/sys/devices/system/cpu/online` were 0-15,21,32-63 then `ranges_arr` will be
-     * [[0, 15], [21, 21], [32 64]]. Note: When there is only a single number instead of range both
-     * start and end are assigned start value.
-     * Note: The ranges_arr has non-overlapping elements */
+    /* Array of ranges, with `range_cnt` items. Eg. if output of `/sys/devices/system/cpu/online`
+     * were 0-15,21,32-63 then `ranges_arr` will be [{0, 15}, {21, 21}, {32 63}]. When there is only
+     * a single number instead of range both start and end are assigned start value.
+     * Note: The ranges should not overlap */
     struct pal_range_info* ranges_arr;
 };
 
 struct pal_core_cache_info {
     struct pal_res_range_info shared_cpu_map;
     size_t level;
-    size_t type;
+    enum cache_type type;
     size_t size;
     enum size_multiplier size_multiplier;
     size_t coherency_line_size;

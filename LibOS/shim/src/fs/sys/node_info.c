@@ -20,8 +20,8 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
     }
 
     char str[PAL_SYSFS_BUF_FILESZ] = {'\0'};
-    ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.online_nodes, str, sizeof(str),
-                                     ",");
+    ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.online_nodes, ",", str,
+                                    sizeof(str));
     if (ret < 0)
         return ret;
 
@@ -42,7 +42,7 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     if (strcmp(name, "cpumap" ) == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topology->cpumap, str, sizeof(str));
     } else if (strcmp(name, "distance") == 0) {
-        ret = sys_convert_ranges_to_str(&numa_topology->distance, str, sizeof(str), " ");
+        ret = sys_convert_ranges_to_str(&numa_topology->distance, " ", str, sizeof(str));
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {
@@ -62,5 +62,6 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
 
     if (ret < 0)
         return ret;
+
     return sys_load(str, out_data, out_size);
 }

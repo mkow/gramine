@@ -15,44 +15,52 @@
 #include "stat.h"
 
 int sys_convert_int_to_sizestr(size_t val, enum size_multiplier size_mult, char* str,
-                               size_t buf_size) {
+                               size_t str_size) {
     int ret = 0;
 
     switch (size_mult) {
         case MULTIPLIER_KB:
-            ret = snprintf(str, buf_size, "%zuK\n", val);
+            ret = snprintf(str, str_size, "%zuK\n", val);
             break;
         case MULTIPLIER_MB:
-            ret = snprintf(str, buf_size, "%zuM\n", val);
+            ret = snprintf(str, str_size, "%zuM\n", val);
             break;
         case MULTIPLIER_GB:
-            ret = snprintf(str, buf_size, "%zuG\n", val);
+            ret = snprintf(str, str_size, "%zuG\n", val);
+            break;
+        case MULTIPLIER_NONE:
+            ret = snprintf(str, str_size, "%zu\n", val);
             break;
         default:
-            ret = snprintf(str, buf_size, "%zu\n", val);
+            /* Unexpected size qualifier */
+            ret = -EINVAL;
             break;
     }
 
-    if ((size_t)ret >= buf_size)
-        ret = -EOVERFLOW;
-    return ret;
+    if (ret < 0)
+        return ret;
+
+    if ((size_t)ret >= str_size)
+        return -EOVERFLOW;
+
+    return 0;
 }
 
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, char* str,
-                              size_t buf_size, const char* sep) {
+int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
+                              char* str, size_t str_size) {
     size_t range_cnt = resource_range_info->range_cnt;
     size_t offset = 0;
     for (size_t i = 0; i < range_cnt; i++) {
-        if (offset > buf_size)
+        if (offset >= str_size)
             return -ENOMEM;
 
         int ret;
         if (resource_range_info->ranges_arr[i].end == resource_range_info->ranges_arr[i].start) {
-            ret = snprintf(str + offset, buf_size - offset, "%zu%s",
+            ret = snprintf(str + offset, str_size - offset, "%zu%s",
                            resource_range_info->ranges_arr[i].start,
                            (i + 1 == range_cnt) ? "\n" : sep);
         } else {
-            ret = snprintf(str + offset, buf_size - offset, "%zu-%zu%s",
+            ret = snprintf(str + offset, str_size - offset, "%zu-%zu%s",
                            resource_range_info->ranges_arr[i].start,
                            resource_range_info->ranges_arr[i].end,
                            (i + 1 == range_cnt) ? "\n" : sep);
@@ -62,7 +70,7 @@ int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_in
             return ret;
 
         /* Truncation has occurred */
-        if ((size_t)ret >= buf_size)
+        if ((size_t)ret >= str_size - offset)
             return -EOVERFLOW;
 
         offset += ret;
@@ -71,7 +79,7 @@ int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_in
 }
 
 int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
-                                         char* str, size_t buf_size) {
+                                         char* str, size_t str_size) {
     int ret;
 
     /* Extract cpumask from the ranges */
@@ -87,17 +95,17 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
         size_t end = resource_range_info->ranges_arr[i].end;
 
         for (size_t j = start; j <= end; j++) {
-            size_t index = j / BITS_IN_TYPE(int);
+            size_t index = j / BITS_IN_TYPE(uint32_t);
             assert(index < cpumask_cnt);
 
-            bitmap[index] |= 1U << (j % BITS_IN_TYPE(int));
+            bitmap[index] |= 1U << (j % BITS_IN_TYPE(uint32_t));
         }
     }
 
     /* Convert cpumask to strings */
     size_t offset = 0;
     for (size_t j = cpumask_cnt; j > 0; j--) {
-        if (offset > buf_size) {
+        if (offset >= str_size) {
             ret = -ENOMEM;
             goto out;
         }
@@ -105,10 +113,10 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
         /* Linux doesn't print leading zeroes for systems with less than 32 cores, e.g. "fff" for
          * 12 cores; we mimic this behavior. */
         if (possible_logical_cores_cnt >= 32) {
-            ret = snprintf(str + offset, buf_size - offset, "%08x%s", bitmap[j-1],
+            ret = snprintf(str + offset, str_size - offset, "%08x%s", bitmap[j-1],
                            (j-1 == 0) ? "\n" : ",");
         } else {
-            ret = snprintf(str + offset, buf_size - offset, "%x%s", bitmap[j-1],
+            ret = snprintf(str + offset, str_size - offset, "%x%s", bitmap[j-1],
                            (j-1 == 0) ? "\n" : ",");
         }
 
@@ -116,7 +124,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
             goto out;
 
         /* Truncation has occurred */
-        if ((size_t)ret >= buf_size) {
+        if ((size_t)ret >= str_size - offset) {
             ret = -EOVERFLOW;
             goto out;
         }

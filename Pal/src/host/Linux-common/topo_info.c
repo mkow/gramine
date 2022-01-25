@@ -17,32 +17,24 @@
 #include "topo_info.h"
 
 /* Opens a pseudo-file describing HW resources and simply reads the value stored in the file. If
- * `retval` and `size_mult` are passed, the value read and the size_qualifier if any are stored.
+ * `size_mult` is passed, the size_qualifier if any is stored in it.
  * Returns UNIX error code on failure and 0 on success. */
 static int get_hw_resource_value(const char* filename, size_t* retval,
                                  enum size_multiplier* size_mult) {
-    if (!retval) {
-        /* `retval` must be passed to store the value read from buffer */
-        return -EINVAL;
-    }
+    assert(retval);
 
     if (size_mult)
         *size_mult = MULTIPLIER_NONE;
 
-    int fd = DO_SYSCALL(open, filename, O_RDONLY | O_CLOEXEC, 0);
-    if (fd < 0)
-        return fd;
-
-    char buf[64];
-    int ret = DO_SYSCALL(read, fd, buf, sizeof(buf) - 1);
-    DO_SYSCALL(close, fd);
+    char str[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
     if (ret < 0)
         return ret;
 
-    buf[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
 
     char* end;
-    long val = strtol(buf, &end, 10);
+    long val = strtol(str, &end, 10);
     if (val < 0 || val > INT_MAX)
         return -ENOENT;
 
@@ -70,35 +62,26 @@ static int get_hw_resource_value(const char* filename, size_t* retval,
 }
 
 /* Opens a pseudo-file describing HW resources such as online CPUs and counts the number of
- * HW resources, ranges present in the file. The result is stored in `struct pal_res_range_info`.
+ * HW resources and their ranges present in the file. The result is stored in `res_info`.
  * Returns UNIX error code on failure and 0 on success.
- * N.B: Understands complex formats like "1,3-5,6"
+ * N.B: Understands complex formats like "1,3-5,6".
  */
 static int get_hw_resource_range(const char* filename, struct pal_res_range_info* res_info) {
-    if (!res_info) {
-        /* `res_info` must be passed to store the range info read from buffer */
-        return -EINVAL;
-    }
+    assert(res_info);
 
     /* Clear user supplied buffer */
     res_info->resource_cnt = 0;
     res_info->range_cnt = 0;
     res_info->ranges_arr = NULL;
 
-    int fd = DO_SYSCALL(open, filename, O_RDONLY | O_CLOEXEC, 0);
-    if (fd < 0)
-        return fd;
-
-    char buf[64];
-    int ret = DO_SYSCALL(read, fd, buf, sizeof(buf) - 1);
-    DO_SYSCALL(close, fd);
+    char str[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
     if (ret < 0)
         return ret;
 
-    buf[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
 
-    char* ptr = buf;
-    size_t resource_cnt = 0;
+    char* ptr = str;
     while (*ptr) {
         while (*ptr == ' ' || *ptr == '\t' || *ptr == ',')
             ptr++;
@@ -107,7 +90,7 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
         long start_val = strtol(ptr, &end, 10);
         if (start_val < 0 || start_val > INT_MAX) {
             ret = -ENOENT;
-            goto out;
+            goto fail;
         }
 
         if (ptr == end)
@@ -117,17 +100,15 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
         size_t range_end;
 
         if (*end == '\0' || *end == ',' || *end == '\n' || *end == ' ') {
-            /* single HW resource index, count as one more */
             range_start = start_val;
             range_end = start_val;
-            resource_cnt++;
+            res_info->resource_cnt++;
         } else if (*end == '-') {
-            /* HW resource range, count how many HW resources are in range */
             ptr = end + 1;
             long end_val = strtol(ptr, &end, 10);
             if (end_val < 0 || end_val > INT_MAX || end_val < start_val) {
                 ret = -EINVAL;
-                goto out;
+                goto fail;
             }
 
             range_start = start_val;
@@ -135,26 +116,28 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
 
             size_t diff = end_val - start_val;
             size_t total_cnt;
-            if (__builtin_add_overflow(resource_cnt, diff, &total_cnt) || total_cnt >= INT_MAX) {
+            if (__builtin_add_overflow(res_info->resource_cnt, diff, &total_cnt) ||
+                                       total_cnt >= INT_MAX) {
                 ret = -EINVAL;
-                goto out;
+                goto fail;
             }
-            resource_cnt += end_val - start_val + 1; //inclusive (e.g., 0-7, or 8-16)
+            res_info->resource_cnt += diff + 1; /* +1 because of inclusive range */
         } else {
             /* Illegal character found */
             ret = -EINVAL;
-            goto out;
+            goto fail;
         }
 
         /* Update range info */
         res_info->range_cnt++;
-        /* Realloc as we identify new range when parsing */
+
+        /* Realloc the array of ranges (expand by one range) */
         size_t new_size = sizeof(struct pal_range_info) * res_info->range_cnt;
         size_t old_size = new_size - sizeof(struct pal_range_info);
         struct pal_range_info* tmp = malloc(new_size);
         if (!tmp) {
             ret = -ENOMEM;
-            goto out;
+            goto fail;
         }
 
         if (res_info->ranges_arr) {
@@ -168,19 +151,17 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
         ptr = end;
     }
 
-    if (!resource_cnt || !res_info->range_cnt) {
+    if (!res_info->resource_cnt || !res_info->range_cnt) {
         ret = -EINVAL;
-        goto out;
+        goto fail;
     }
-    res_info->resource_cnt = resource_cnt;
 
     return 0;
-out:
-    for (size_t i = 0; i < res_info->range_cnt; i++) {
-        if (res_info[i].ranges_arr)
-            free(res_info[i].ranges_arr);
-    }
-    /* Clear user supplied buffer */
+
+fail:
+    if (res_info->ranges_arr)
+        free(res_info->ranges_arr);
+
     res_info->resource_cnt = 0;
     res_info->range_cnt = 0;
     res_info->ranges_arr = NULL;
@@ -212,13 +193,10 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
 /* Returns number of cache levels present on this system by counting "indexX" dir entries under
  * `/sys/devices/system/cpu/cpuX/cache` on success and negative UNIX error code on failure. */
 static int get_cache_levels_cnt(const char* path, size_t* cache_indices_cnt) {
-    if (!cache_indices_cnt){
-        /* `cache_indices_cnt` must be passed to store the number of cache indices */
-        return -EINVAL;
-    }
+    assert(cache_indices_cnt);
 
     char buf[1024];
-    int ret = 0;
+    int ret;
     int dirs_cnt = 0;
 
     int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
@@ -247,7 +225,10 @@ static int get_cache_levels_cnt(const char* path, size_t* cache_indices_cnt) {
         ret = -ENOENT;
         goto out;
     }
+
     *cache_indices_cnt = dirs_cnt;
+    ret = 0;
+
 out:
     DO_SYSCALL(close, fd);
     return ret;
@@ -263,28 +244,27 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
         return -ENOMEM;
     }
 
-    char filename[128];
+    char dirname[PAL_SYSFS_PATH_LEN];
+    char filename[PAL_SYSFS_PATH_LEN];
     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_list", core_idx,
-                 cache_idx);
+        snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu/cache/index%zu",
+                 core_idx, cache_idx);
+
+        snprintf(filename, sizeof(filename), "%s/shared_cpu_list", dirname);
         ret = get_hw_resource_range(filename, &cache_info_arr[cache_idx].shared_cpu_map);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
 
-        snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/cache/index%zu/level",
-                 core_idx, cache_idx);
+        snprintf(filename, sizeof(filename), "%s/level", dirname);
         ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].level, /*size_mult=*/NULL);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
 
         char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
-        snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/cache/index%zu/type",
-                 core_idx, cache_idx);
-
-        ret = read_file_buffer(filename, type, ARRAY_SIZE(type)-1);
+        snprintf(filename, sizeof(filename), "%s/type", dirname);
+        ret = read_file_buffer(filename, type, sizeof(type) - 1);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
         type[ret] = '\0';
 
         if (!strcmp(type, "Unified\n")) {
@@ -295,45 +275,38 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
             cache_info_arr[cache_idx].type = CACHE_TYPE_DATA;
         } else {
             ret = -EINVAL;
-            goto out_cache;
+            goto fail;
         }
 
         enum size_multiplier size_mult;
-        snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/cache/index%zu/size",
-                 core_idx, cache_idx);
+        snprintf(filename, sizeof(filename), "%s/size", dirname);
         ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].size, &size_mult);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
         cache_info_arr[cache_idx].size_multiplier = size_mult;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/coherency_line_size", core_idx,
-                 cache_idx);
+        snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
         ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].coherency_line_size,
                                     /*size_mult=*/NULL);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/number_of_sets", core_idx,
-                 cache_idx);
+        snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
         ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].number_of_sets,
                                     /*size_mult=*/NULL);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition", core_idx,
-                 cache_idx);
+        snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
         ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].physical_line_partition,
                                     /*size_mult=*/NULL);
         if (ret < 0)
-            goto out_cache;
+            goto fail;
     }
     *out_cache_info_arr = cache_info_arr;
     return 0;
 
-out_cache:
+fail:
     free(cache_info_arr);
     return ret;
 }
@@ -360,7 +333,7 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
 
     /* TODO: correctly support offline cores */
     if (possible_logical_cores_cnt > online_logical_cores_cnt) {
-        log_error("Some CPUs seem to be offline; Gramine currently doesn't support core offling");
+        log_error("Some CPUs seem to be offline; Gramine currently doesn't support core offlining");
         return -EINVAL;
     }
 
@@ -374,37 +347,36 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
         return -ENOMEM;
 
     size_t current_max_socket = 0;
-    char filename[128];
+    char dirname[PAL_SYSFS_PATH_LEN];
+    char filename[PAL_SYSFS_PATH_LEN];
     for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
+        snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu", idx);
+
         /* cpu0 is always online and thus the "online" file is not present. */
         if (idx != 0) {
-            snprintf(filename, sizeof(filename), "/sys/devices/system/cpu/cpu%zu/online", idx);
+            snprintf(filename, sizeof(filename), "%s/online", dirname);
             ret = get_hw_resource_value(filename, &core_topology_arr[idx].is_logical_core_online,
                                         /*size_mult=*/NULL);
             if (ret < 0)
                 goto out;
         }
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/topology/core_id", idx);
+        snprintf(filename, sizeof(filename), "%s/topology/core_id", dirname);
         ret = get_hw_resource_value(filename, &core_topology_arr[idx].core_id, /*size_mult=*/NULL);
         if (ret < 0)
             goto out;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", idx);
+        snprintf(filename, sizeof(filename), "%s/topology/core_siblings_list", dirname);
         ret = get_hw_resource_range(filename, &core_topology_arr[idx].core_siblings);
         if (ret < 0)
             goto out;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings_list", idx);
+        snprintf(filename, sizeof(filename), "%s/topology/thread_siblings_list", dirname);
         ret = get_hw_resource_range(filename, &core_topology_arr[idx].thread_siblings);
         if (ret < 0)
             goto out;
 
-        snprintf(filename, sizeof(filename),
-                 "/sys/devices/system/cpu/cpu%zu/topology/physical_package_id", idx);
+        snprintf(filename, sizeof(filename), "%s/topology/physical_package_id", dirname);
         ret = get_hw_resource_value(filename, &core_topology_arr[idx].socket_id,
                                     /*size_mult=*/NULL);
         if (ret < 0)
@@ -442,7 +414,7 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
     if (!numa_topology_arr)
         return -ENOMEM;
 
-    char filename[128];
+    char filename[PAL_SYSFS_PATH_LEN];
     for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
         snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpulist", idx);
         ret = get_hw_resource_range(filename, &numa_topology_arr[idx].cpumap);

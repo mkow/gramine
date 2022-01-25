@@ -211,21 +211,21 @@ int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t cal
 
 /* Converts an integer to a string, optionally appending a given single-letter unit suffix
  * (see enum size_multiplier for possible values).
- * Note: This function adds a newline at end of the string. */
+ * Note: This function adds a newline at the end of the string. */
 int sys_convert_int_to_sizestr(size_t val, enum size_multiplier size_mult, char* str,
-                               size_t buf_size);
+                               size_t str_size);
 
 /* Converts struct pal_res_range_info to a string representation.
  * Example output when sep == ',': "10-63,68,70-127".
- * Note: This function adds a newline at end of the string. */
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, char* str,
-                              size_t buf_size, const char* sep);
+ * Note: This function adds a newline at the end of the string. */
+int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
+                              char* str, size_t str_size);
 
 /* Converts struct pal_res_range_info to a sysfs CPU bitmask representation with bitmask size based
  * on the possible cores count in the system.
  * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff".
- * Note: This function adds a newline at end of the string. */
+ * Note: This function adds a newline at the end of the string. */
 int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info, char* str,
-                                         size_t buf_size);
+                                         size_t str_size);
 
 #endif /* SHIM_FS_PSEUDO_H_ */

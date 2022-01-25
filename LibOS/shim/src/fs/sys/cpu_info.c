@@ -18,11 +18,11 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
     char str[PAL_SYSFS_BUF_FILESZ] = {'\0'};
 
     if (strcmp(name, "online") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.online_logical_cores, str,
-                                        sizeof(str), ",");
+        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.online_logical_cores, ",",
+                                        str, sizeof(str));
     } else if (strcmp(name, "possible") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.possible_logical_cores, str,
-                                        sizeof(str), ",");
+        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.possible_logical_cores, ",",
+                                        str, sizeof(str));
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;
@@ -30,6 +30,7 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
 
     if (ret < 0)
         return ret;
+
     return sys_load(str, out_data, out_size);
 }
 
@@ -67,6 +68,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
 
     if (ret < 0)
         return ret;
+
     return sys_load(str, out_data, out_size);
 }
 
@@ -95,5 +97,6 @@ int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t cal
         if (ret < 0)
             return ret;
     }
+
     return 0;
 }

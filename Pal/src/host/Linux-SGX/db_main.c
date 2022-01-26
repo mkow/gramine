@@ -192,7 +192,6 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
             cache_info_arr[lvl].level = READ_ONCE(untrusted_cache_info->level);
             cache_info_arr[lvl].type = READ_ONCE(untrusted_cache_info->type);
             cache_info_arr[lvl].size = READ_ONCE(untrusted_cache_info->size);
-            cache_info_arr[lvl].size_multiplier = READ_ONCE(untrusted_cache_info->size_multiplier);
             cache_info_arr[lvl].coherency_line_size =
                 READ_ONCE(untrusted_cache_info->coherency_line_size);
             cache_info_arr[lvl].number_of_sets = READ_ONCE(untrusted_cache_info->number_of_sets);
@@ -347,26 +346,7 @@ static int sanitize_cache_topology_info(struct pal_core_cache_info* cache_info_a
         if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].level, 1, MAX_CACHE_LEVELS))
             return -1;
 
-        if (cache_info_arr[lvl].size_multiplier != MULTIPLIER_KB &&
-                cache_info_arr[lvl].size_multiplier != MULTIPLIER_MB &&
-                cache_info_arr[lvl].size_multiplier != MULTIPLIER_GB &&
-                cache_info_arr[lvl].size_multiplier != MULTIPLIER_NONE) {
-            return -1;
-        }
-
-        size_t multiplier = 1;
-        if (cache_info_arr[lvl].size_multiplier == MULTIPLIER_KB)
-            multiplier = 1024;
-        else if (cache_info_arr[lvl].size_multiplier == MULTIPLIER_MB)
-            multiplier = 1024 * 1024;
-        else if (cache_info_arr[lvl].size_multiplier == MULTIPLIER_GB)
-            multiplier = 1024 * 1024 * 1024;
-
-        size_t cache_size;
-        if (__builtin_mul_overflow(cache_info_arr[lvl].size, multiplier, &cache_size))
-            return -1;
-
-        if (!IS_IN_RANGE_INCL(cache_size, 1, 1 << 30))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].size, 1, 1 << 30))
             return -1;
 
         if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].coherency_line_size, 1, 1 << 16))
@@ -775,7 +755,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
     /* Allocate enclave memory to store core topology info */
     ret = sgx_copy_core_topo_to_enclave(uptr_topo_info->core_topology_arr, online_logical_cores_cnt,
                                         topo_info->cache_indices_cnt,
-                                        &g_pal_public_state.topo_info.core_topology_arr);
+                                        &topo_info->core_topology_arr);
     if (ret < 0) {
         log_error("Copying core_topology_arr into the enclave failed");
         return -1;
@@ -802,7 +782,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
 
     size_t online_nodes_cnt = topo_info->online_nodes.resource_cnt;
     ret = sgx_copy_numa_topo_to_enclave(uptr_topo_info->numa_topology_arr, online_nodes_cnt,
-                                        &g_pal_public_state.topo_info.numa_topology_arr);
+                                        &topo_info->numa_topology_arr);
     if (ret < 0) {
         log_error("Copying numa_topology_arr into the enclave failed");
         return -1;

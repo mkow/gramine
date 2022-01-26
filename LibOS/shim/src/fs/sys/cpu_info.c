@@ -49,13 +49,11 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         /* `cpu/cpuX/online` is not present for cpu0 */
         if (cpu_num == 0)
             return -ENOENT;
-        ret = sys_convert_int_to_sizestr(core_topology->is_logical_core_online, MULTIPLIER_NONE,
-                                         str, sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->is_logical_core_online);
     } else if (strcmp(name, "core_id") == 0) {
-        ret = sys_convert_int_to_sizestr(core_topology->core_id, MULTIPLIER_NONE, str, sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->core_id);
     } else if (strcmp(name, "physical_package_id") == 0) {
-        ret = sys_convert_int_to_sizestr(core_topology->socket_id, MULTIPLIER_NONE, str,
-                                         sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->socket_id);
     } else if (strcmp(name, "core_siblings") == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&core_topology->core_siblings, str, sizeof(str));
     } else if (strcmp(name, "thread_siblings") == 0) {

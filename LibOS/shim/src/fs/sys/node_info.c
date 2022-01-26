@@ -46,11 +46,9 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {
-            ret = sys_convert_int_to_sizestr(numa_topology->nr_hugepages[HUGEPAGES_2M],
-                                             MULTIPLIER_NONE, str, sizeof(str));
+            ret = snprintf(str, sizeof(str), "%zu\n", numa_topology->nr_hugepages[HUGEPAGES_2M]);
         } else if (strcmp(parent_name, "hugepages-1048576kB") == 0) {
-            ret = sys_convert_int_to_sizestr(numa_topology->nr_hugepages[HUGEPAGES_1G],
-                                             MULTIPLIER_NONE, str, sizeof(str));
+            ret = snprintf(str, sizeof(str), "%zu\n", numa_topology->nr_hugepages[HUGEPAGES_1G]);
         } else {
             log_debug("unrecognized hugepage file: %s", parent_name);
             ret = -ENOENT;

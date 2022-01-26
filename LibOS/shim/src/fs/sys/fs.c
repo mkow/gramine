@@ -14,38 +14,6 @@
 #include "shim_fs_pseudo.h"
 #include "stat.h"
 
-int sys_convert_int_to_sizestr(size_t val, enum size_multiplier size_mult, char* str,
-                               size_t str_size) {
-    int ret = 0;
-
-    switch (size_mult) {
-        case MULTIPLIER_KB:
-            ret = snprintf(str, str_size, "%zuK\n", val);
-            break;
-        case MULTIPLIER_MB:
-            ret = snprintf(str, str_size, "%zuM\n", val);
-            break;
-        case MULTIPLIER_GB:
-            ret = snprintf(str, str_size, "%zuG\n", val);
-            break;
-        case MULTIPLIER_NONE:
-            ret = snprintf(str, str_size, "%zu\n", val);
-            break;
-        default:
-            /* Unexpected size qualifier */
-            ret = -EINVAL;
-            break;
-    }
-
-    if (ret < 0)
-        return ret;
-
-    if ((size_t)ret >= str_size)
-        return -EOVERFLOW;
-
-    return 0;
-}
-
 int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
                               char* str, size_t str_size) {
     size_t range_cnt = resource_range_info->range_cnt;

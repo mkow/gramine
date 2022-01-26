@@ -209,12 +209,6 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 
-/* Converts an integer to a string, optionally appending a given single-letter unit suffix
- * (see enum size_multiplier for possible values).
- * Note: This function adds a newline at the end of the string. */
-int sys_convert_int_to_sizestr(size_t val, enum size_multiplier size_mult, char* str,
-                               size_t str_size);
-
 /* Converts struct pal_res_range_info to a string representation.
  * Example output when sep == ',': "10-63,68,70-127".
  * Note: This function adds a newline at the end of the string. */

@@ -16,15 +16,10 @@
 #include "syscall.h"
 #include "topo_info.h"
 
-/* Opens a pseudo-file describing HW resources and simply reads the value stored in the file. If
- * `size_mult` is passed, the size_qualifier if any is stored in it.
+/* Opens a pseudo-file describing HW resources and simply reads the value stored in the file.
  * Returns UNIX error code on failure and 0 on success. */
-static int get_hw_resource_value(const char* filename, size_t* retval,
-                                 enum size_multiplier* size_mult) {
+static int get_hw_resource_value(const char* filename, size_t* retval) {
     assert(retval);
-
-    if (size_mult)
-        *size_mult = MULTIPLIER_NONE;
 
     char str[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(filename, str, sizeof(str) - 1);
@@ -38,26 +33,22 @@ static int get_hw_resource_value(const char* filename, size_t* retval,
     if (val < 0 || val > INT_MAX)
         return -ENOENT;
 
-    if (*end != '\n' && *end != '\0' && *end != 'K' && *end != 'M' && *end != 'G') {
+    if (*end != '\n' && *end != '\0' && *end != 'K') {
         /* Illegal character found */
         return -EINVAL;
     }
 
-    *retval = val;
+    if (*end == 'K') {
+        ret = __builtin_mul_overflow(val, 1024, &val);
+        if (ret < 0)
+            return -EINVAL;
 
-    /* Update size_multiplier if provided */
-    if (size_mult) {
-        if (*end == 'K') {
-            *size_mult = MULTIPLIER_KB;
-        } else if (*end == 'M') {
-            *size_mult = MULTIPLIER_MB;
-        } else if (*end == 'G') {
-            *size_mult = MULTIPLIER_GB;
-        } else {
-            *size_mult = MULTIPLIER_NONE;
-        }
+        /* Ensure the size hasn't exceed max threshold after multiplying by size qualifier */
+        if (val > INT_MAX)
+            return -EINVAL;
     }
 
+    *retval = val;
     return 0;
 }
 
@@ -256,7 +247,7 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
             goto fail;
 
         snprintf(filename, sizeof(filename), "%s/level", dirname);
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].level, /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].level);
         if (ret < 0)
             goto fail;
 
@@ -278,28 +269,23 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
             goto fail;
         }
 
-        enum size_multiplier size_mult;
         snprintf(filename, sizeof(filename), "%s/size", dirname);
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].size, &size_mult);
+        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].size);
         if (ret < 0)
             goto fail;
-        cache_info_arr[cache_idx].size_multiplier = size_mult;
 
         snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].coherency_line_size,
-                                    /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].coherency_line_size);
         if (ret < 0)
             goto fail;
 
         snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].number_of_sets,
-                                    /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].number_of_sets);
         if (ret < 0)
             goto fail;
 
         snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
-        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].physical_line_partition,
-                                    /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &cache_info_arr[cache_idx].physical_line_partition);
         if (ret < 0)
             goto fail;
     }
@@ -355,14 +341,13 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
         /* cpu0 is always online and thus the "online" file is not present. */
         if (idx != 0) {
             snprintf(filename, sizeof(filename), "%s/online", dirname);
-            ret = get_hw_resource_value(filename, &core_topology_arr[idx].is_logical_core_online,
-                                        /*size_mult=*/NULL);
+            ret = get_hw_resource_value(filename, &core_topology_arr[idx].is_logical_core_online);
             if (ret < 0)
                 goto out;
         }
 
         snprintf(filename, sizeof(filename), "%s/topology/core_id", dirname);
-        ret = get_hw_resource_value(filename, &core_topology_arr[idx].core_id, /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &core_topology_arr[idx].core_id);
         if (ret < 0)
             goto out;
 
@@ -377,8 +362,7 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
             goto out;
 
         snprintf(filename, sizeof(filename), "%s/topology/physical_package_id", dirname);
-        ret = get_hw_resource_value(filename, &core_topology_arr[idx].socket_id,
-                                    /*size_mult=*/NULL);
+        ret = get_hw_resource_value(filename, &core_topology_arr[idx].socket_id);
         if (ret < 0)
             goto out;
 

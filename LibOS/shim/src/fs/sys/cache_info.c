@@ -32,7 +32,7 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     if (strcmp(name, "shared_cpu_map") == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&cache_info->shared_cpu_map, str, sizeof(str));
     } else if (strcmp(name, "level") == 0) {
-        ret = sys_convert_int_to_sizestr(cache_info->level, MULTIPLIER_NONE, str, sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->level);
     } else if (strcmp(name, "type") == 0) {
         switch (cache_info->type) {
             case CACHE_TYPE_DATA:
@@ -48,17 +48,13 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
                 ret = -ENOENT;
         }
     } else if (strcmp(name, "size") == 0) {
-        ret = sys_convert_int_to_sizestr(cache_info->size, cache_info->size_multiplier, str,
-                                         sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zuK\n", cache_info->size >> 10);
     } else if (strcmp(name, "coherency_line_size") == 0) {
-        ret = sys_convert_int_to_sizestr(cache_info->coherency_line_size, MULTIPLIER_NONE, str,
-                                         sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->coherency_line_size);
     } else if (strcmp(name, "number_of_sets") == 0) {
-        ret = sys_convert_int_to_sizestr(cache_info->number_of_sets, MULTIPLIER_NONE, str,
-                                         sizeof(str));
+        ret = snprintf(str, sizeof(str), "%zu\n", cache_info->number_of_sets);
     } else if (strcmp(name, "physical_line_partition") == 0) {
-        ret = sys_convert_int_to_sizestr(cache_info->physical_line_partition, MULTIPLIER_NONE, str,
-                                         sizeof(str));
+        snprintf(str, sizeof(str), "%zu\n", cache_info->physical_line_partition);
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;

@@ -28,13 +28,6 @@ enum {
     HUGEPAGES_MAX,
 };
 
-enum size_multiplier {
-    MULTIPLIER_NONE,
-    MULTIPLIER_KB,
-    MULTIPLIER_MB,
-    MULTIPLIER_GB,
-};
-
 enum cache_type {
     CACHE_TYPE_DATA,
     CACHE_TYPE_INSTRUCTION,
@@ -66,8 +59,9 @@ struct pal_core_cache_info {
     struct pal_res_range_info shared_cpu_map;
     size_t level;
     enum cache_type type;
+    /* Total cache size is always in kB. So to get actual cache size multiply this value by 1024.
+     * Pls ref: https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-devices-system-cpu */
     size_t size;
-    enum size_multiplier size_multiplier;
     size_t coherency_line_size;
     size_t number_of_sets;
     size_t physical_line_partition;

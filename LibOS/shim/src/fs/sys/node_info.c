@@ -36,19 +36,18 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    struct pal_numa_topo_info* numa_topology =
-        &g_pal_public_state->topo_info.numa_topology_arr[node_num];
+    struct pal_numa_topo_info* numa_topo = &g_pal_public_state->topo_info.numa_topo_arr[node_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "cpumap" ) == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topology->cpumap, str, sizeof(str));
+        ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topo->cpumap, str, sizeof(str));
     } else if (strcmp(name, "distance") == 0) {
-        ret = sys_convert_ranges_to_str(&numa_topology->distance, " ", str, sizeof(str));
+        ret = sys_convert_ranges_to_str(&numa_topo->distance, " ", str, sizeof(str));
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {
-            ret = snprintf(str, sizeof(str), "%zu\n", numa_topology->nr_hugepages[HUGEPAGES_2M]);
+            ret = snprintf(str, sizeof(str), "%zu\n", numa_topo->nr_hugepages[HUGEPAGES_2M]);
         } else if (strcmp(parent_name, "hugepages-1048576kB") == 0) {
-            ret = snprintf(str, sizeof(str), "%zu\n", numa_topology->nr_hugepages[HUGEPAGES_1G]);
+            ret = snprintf(str, sizeof(str), "%zu\n", numa_topo->nr_hugepages[HUGEPAGES_1G]);
         } else {
             log_debug("unrecognized hugepage file: %s", parent_name);
             ret = -ENOENT;

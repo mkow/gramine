@@ -219,7 +219,7 @@ int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_in
  * on the possible cores count in the system.
  * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff".
  * Note: This function adds a newline at the end of the string. */
-int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info, char* str,
-                                         size_t str_size);
+int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
+                                         char* str, size_t str_size);
 
 #endif /* SHIM_FS_PSEUDO_H_ */

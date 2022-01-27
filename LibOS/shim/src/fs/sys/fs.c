@@ -16,13 +16,13 @@
 
 int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
                               char* str, size_t str_size) {
-    size_t range_cnt = resource_range_info->range_cnt;
-    if (!range_cnt)
+    size_t ranges_cnt = resource_range_info->ranges_cnt;
+    if (!ranges_cnt)
         return -EINVAL;
 
-    memset(str, 0, str_size);
+    str[0] = '\0';
     size_t offset = 0;
-    for (size_t i = 0; i < range_cnt; i++) {
+    for (size_t i = 0; i < ranges_cnt; i++) {
         if (offset >= str_size)
             return -ENOMEM;
 
@@ -30,12 +30,12 @@ int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_in
         if (resource_range_info->ranges_arr[i].end == resource_range_info->ranges_arr[i].start) {
             ret = snprintf(str + offset, str_size - offset, "%zu%s",
                            resource_range_info->ranges_arr[i].start,
-                           (i + 1 == range_cnt) ? "\n" : sep);
+                           (i + 1 == ranges_cnt) ? "\n" : sep);
         } else {
             ret = snprintf(str + offset, str_size - offset, "%zu-%zu%s",
                            resource_range_info->ranges_arr[i].start,
                            resource_range_info->ranges_arr[i].end,
-                           (i + 1 == range_cnt) ? "\n" : sep);
+                           (i + 1 == ranges_cnt) ? "\n" : sep);
         }
 
         if (ret < 0)
@@ -58,11 +58,13 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
     size_t possible_logical_cores_cnt =
         g_pal_public_state->topo_info.possible_logical_cores.resource_cnt;
     size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
+    assert(cpumask_cnt > 0);
+
     uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
     if (!bitmap)
         return -ENOMEM;
 
-    for (size_t i = 0; i < resource_range_info->range_cnt; i++) {
+    for (size_t i = 0; i < resource_range_info->ranges_cnt; i++) {
         size_t start = resource_range_info->ranges_arr[i].start;
         size_t end = resource_range_info->ranges_arr[i].end;
 

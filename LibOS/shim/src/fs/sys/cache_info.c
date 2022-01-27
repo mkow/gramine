@@ -27,7 +27,7 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
 
     const char* name = dent->name;
     struct pal_core_cache_info* cache_info =
-        &g_pal_public_state->topo_info.core_topology_arr[cpu_num].cache_info_arr[cache_num];
+        &g_pal_public_state->topo_info.core_topo_arr[cpu_num].cache_info_arr[cache_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "shared_cpu_map") == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&cache_info->shared_cpu_map, str, sizeof(str));

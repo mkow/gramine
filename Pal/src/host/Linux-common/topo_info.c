@@ -18,8 +18,8 @@
 
 /* Opens a pseudo-file describing HW resources and simply reads the value stored in the file.
  * Returns UNIX error code on failure and 0 on success. */
-static int get_hw_resource_value(const char* filename, size_t* retval) {
-    assert(retval);
+static int get_hw_resource_value(const char* filename, size_t* out_value) {
+    assert(out_value);
 
     char str[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(filename, str, sizeof(str) - 1);
@@ -31,7 +31,7 @@ static int get_hw_resource_value(const char* filename, size_t* retval) {
     char* end;
     long val = strtol(str, &end, 10);
     if (val < 0 || val > INT_MAX)
-        return -ENOENT;
+        return -EINVAL;
 
     if (*end != '\n' && *end != '\0' && *end != 'K') {
         /* Illegal character found */
@@ -39,31 +39,30 @@ static int get_hw_resource_value(const char* filename, size_t* retval) {
     }
 
     if (*end == 'K') {
-        ret = __builtin_mul_overflow(val, 1024, &val);
-        if (ret < 0)
-            return -EINVAL;
+        if (__builtin_mul_overflow(val, 1024, &val))
+            return -EOVERFLOW;
 
         /* Ensure the size hasn't exceed max threshold after multiplying by size qualifier */
         if (val > INT_MAX)
             return -EINVAL;
     }
 
-    *retval = val;
+    *out_value = val;
     return 0;
 }
 
 /* Opens a pseudo-file describing HW resources such as online CPUs and counts the number of
- * HW resources and their ranges present in the file. The result is stored in `res_info`.
+ * HW resources and their ranges present in the file. The result is stored in `out_info`.
  * Returns UNIX error code on failure and 0 on success.
- * N.B: Understands complex formats like "1,3-5,6".
+ * N.B: Understands complex formats like "1-5,10-15,20,30-31".
  */
-static int get_hw_resource_range(const char* filename, struct pal_res_range_info* res_info) {
-    assert(res_info);
+static int get_hw_resource_range(const char* filename, struct pal_res_range_info* out_info) {
+    assert(out_info);
 
     /* Clear user supplied buffer */
-    res_info->resource_cnt = 0;
-    res_info->range_cnt = 0;
-    res_info->ranges_arr = NULL;
+    out_info->resource_cnt = 0;
+    out_info->range_cnt = 0;
+    out_info->ranges_arr = NULL;
 
     char str[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(filename, str, sizeof(str) - 1);
@@ -74,7 +73,7 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
 
     char* ptr = str;
     while (*ptr) {
-        while (*ptr == ' ' || *ptr == '\t' || *ptr == ',')
+        while (*ptr == ' ' || *ptr == ',')
             ptr++;
 
         char* end;
@@ -93,7 +92,15 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
         if (*end == '\0' || *end == ',' || *end == '\n' || *end == ' ') {
             range_start = start_val;
             range_end = start_val;
-            res_info->resource_cnt++;
+
+            size_t total_cnt;
+            if (__builtin_add_overflow(out_info->resource_cnt, 1, &total_cnt) ||
+                                       total_cnt >= INT_MAX) {
+                ret = -EOVERFLOW;
+                goto fail;
+            }
+
+            out_info->resource_cnt++;
         } else if (*end == '-') {
             ptr = end + 1;
             long end_val = strtol(ptr, &end, 10);
@@ -107,12 +114,12 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
 
             size_t diff = end_val - start_val;
             size_t total_cnt;
-            if (__builtin_add_overflow(res_info->resource_cnt, diff, &total_cnt) ||
+            if (__builtin_add_overflow(out_info->resource_cnt, diff, &total_cnt) ||
                                        total_cnt >= INT_MAX) {
-                ret = -EINVAL;
+                ret = -EOVERFLOW;
                 goto fail;
             }
-            res_info->resource_cnt += diff + 1; /* +1 because of inclusive range */
+            out_info->resource_cnt += diff + 1; /* +1 because of inclusive range */
         } else {
             /* Illegal character found */
             ret = -EINVAL;
@@ -120,29 +127,31 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
         }
 
         /* Update range info */
-        res_info->range_cnt++;
+        out_info->range_cnt++;
 
         /* Realloc the array of ranges (expand by one range) */
-        size_t new_size = sizeof(struct pal_range_info) * res_info->range_cnt;
+        size_t new_size = sizeof(struct pal_range_info) * out_info->range_cnt;
         size_t old_size = new_size - sizeof(struct pal_range_info);
+        /* TODO: Optimize realloc by doing some overestimation and trimming later once the
+         * range count is known */
         struct pal_range_info* tmp = malloc(new_size);
         if (!tmp) {
             ret = -ENOMEM;
             goto fail;
         }
 
-        if (res_info->ranges_arr) {
-            memcpy(tmp, res_info->ranges_arr, old_size);
-            free(res_info->ranges_arr);
+        if (out_info->ranges_arr) {
+            memcpy(tmp, out_info->ranges_arr, old_size);
+            free(out_info->ranges_arr);
         }
-        res_info->ranges_arr = tmp;
-        res_info->ranges_arr[res_info->range_cnt - 1].start = range_start;
-        res_info->ranges_arr[res_info->range_cnt - 1].end = range_end;
+        out_info->ranges_arr = tmp;
+        out_info->ranges_arr[out_info->range_cnt - 1].start = range_start;
+        out_info->ranges_arr[out_info->range_cnt - 1].end = range_end;
 
         ptr = end;
     }
 
-    if (!res_info->resource_cnt || !res_info->range_cnt) {
+    if (!out_info->resource_cnt || !out_info->range_cnt) {
         ret = -EINVAL;
         goto fail;
     }
@@ -150,12 +159,10 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
     return 0;
 
 fail:
-    if (res_info->ranges_arr)
-        free(res_info->ranges_arr);
-
-    res_info->resource_cnt = 0;
-    res_info->range_cnt = 0;
-    res_info->ranges_arr = NULL;
+    free(out_info->ranges_arr);
+    out_info->resource_cnt = 0;
+    out_info->range_cnt = 0;
+    out_info->ranges_arr = NULL;
 
     return ret;
 }
@@ -181,14 +188,15 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
         buf[ret] = '\0';                                                         \
     })
 
-/* Returns number of cache levels present on this system by counting "indexX" dir entries under
- * `/sys/devices/system/cpu/cpuX/cache` on success and negative UNIX error code on failure. */
+/* Updates `cache_indices_cnt` with number of cache levels present on the system by counting
+ * "indexX" dir entries under `/sys/devices/system/cpu/cpuX/cache`. Returns 0 on success and
+ * negative UNIX error code on failure. */
 static int get_cache_levels_cnt(const char* path, size_t* cache_indices_cnt) {
     assert(cache_indices_cnt);
 
     char buf[1024];
     int ret;
-    int dirs_cnt = 0;
+    size_t dirs_cnt = 0;
 
     int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
     if (fd < 0)

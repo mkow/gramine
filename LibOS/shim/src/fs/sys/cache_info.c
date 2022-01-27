@@ -36,13 +36,13 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     } else if (strcmp(name, "type") == 0) {
         switch (cache_info->type) {
             case CACHE_TYPE_DATA:
-                ret = snprintf(str, sizeof(str), "%s\n", "Data");
+                ret = snprintf(str, sizeof(str), "Data\n");
                 break;
             case CACHE_TYPE_INSTRUCTION:
-                ret = snprintf(str, sizeof(str), "%s\n", "Instruction");
+                ret = snprintf(str, sizeof(str), "Instruction\n");
                 break;
             case CACHE_TYPE_UNIFIED:
-                ret = snprintf(str, sizeof(str), "%s\n", "Unified");
+                ret = snprintf(str, sizeof(str), "Unified\n");
                 break;
             default:
                 ret = -ENOENT;

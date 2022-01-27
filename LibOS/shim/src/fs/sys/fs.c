@@ -17,6 +17,10 @@
 int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
                               char* str, size_t str_size) {
     size_t range_cnt = resource_range_info->range_cnt;
+    if (!range_cnt)
+        return -EINVAL;
+
+    memset(str, 0, str_size);
     size_t offset = 0;
     for (size_t i = 0; i < range_cnt; i++) {
         if (offset >= str_size)
@@ -53,7 +57,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
     /* Extract cpumask from the ranges */
     size_t possible_logical_cores_cnt =
         g_pal_public_state->topo_info.possible_logical_cores.resource_cnt;
-    size_t cpumask_cnt = BITS_TO_INTS(possible_logical_cores_cnt);
+    size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
     uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
     if (!bitmap)
         return -ENOMEM;

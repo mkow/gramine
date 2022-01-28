@@ -51,7 +51,7 @@ struct pal_res_range_info {
     size_t ranges_cnt;
 
     /* Array of ranges, with `ranges_cnt` items. E.g. if output of `/sys/devices/system/cpu/online`
-     * was 0-15,16-30,31 then `ranges_arr` will be [{0, 15}, {16, 30}, {31, 31}].
+     * was 0-12,16-30,31 then `ranges_arr` will be [{0, 12}, {16, 30}, {31, 31}].
      * Note: The ranges should not overlap */
     struct pal_range_info* ranges_arr;
 };

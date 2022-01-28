@@ -88,13 +88,10 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
             range_start = start_val;
             range_end = start_val;
 
-            size_t total_cnt;
-            if (__builtin_add_overflow(out_info->resource_cnt, 1, &total_cnt)) {
+            if (__builtin_add_overflow(out_info->resource_cnt, 1, &out_info->resource_cnt)) {
                 ret = -EOVERFLOW;
                 goto fail;
             }
-
-            out_info->resource_cnt = total_cnt;
         } else if (*end == '-') {
             ptr = end + 1;
             long end_val = strtol(ptr, &end, 10);
@@ -107,12 +104,10 @@ static int get_hw_resource_range(const char* filename, struct pal_res_range_info
             range_end = end_val;
 
             size_t diff = end_val - start_val + 1; /* +1 because of inclusive range */
-            size_t total_cnt;
-            if (__builtin_add_overflow(out_info->resource_cnt, diff, &total_cnt)) {
+            if (__builtin_add_overflow(out_info->resource_cnt, diff, &out_info->resource_cnt)) {
                 ret = -EOVERFLOW;
                 goto fail;
             }
-            out_info->resource_cnt = total_cnt;
         } else {
             /* Illegal character found */
             ret = -EINVAL;
@@ -182,7 +177,7 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
     })
 
 /* This function stores the number of cache levels present on the system by counting "indexX" dir
- * entries under `/sys/devices/system/cpu/cpuX/cache`in `out_cache_indices_cnt`. Returns 0 on
+ * entries under `/sys/devices/system/cpu/cpuX/cache` in `out_cache_indices_cnt`. Returns 0 on
  * success and negative UNIX error code on failure. */
 static int get_cache_levels_cnt(const char* path, size_t* out_cache_indices_cnt) {
     assert(out_cache_indices_cnt);

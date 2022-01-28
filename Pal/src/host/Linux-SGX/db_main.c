@@ -70,6 +70,7 @@ void _DkGetAvailableUserAddressRange(PAL_PTR* start, PAL_PTR* end) {
  * to free it (For argv and envp we rely on auto free on termination in
  * practice).
  */
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static const char** make_argv_list(void* uptr_src, size_t src_size) {
     const char** argv;
 
@@ -85,7 +86,8 @@ static const char** make_argv_list(void* uptr_src, size_t src_size) {
         return NULL;
     }
 
-    /* TODO: Fix untrusted pointer access by adding `READ_ONCE()`*/
+    /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_src` by adding
+     * `READ_ONCE()`. */
     if (!sgx_copy_to_enclave(data, src_size, uptr_src, src_size)) {
         goto fail;
     }
@@ -124,10 +126,12 @@ fail:
     return NULL;
 }
 
-/* This function and all the below functions don't clean up resources on failure.
- * We terminate the process anyway. */
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
                                           struct pal_res_range_info* dest) {
+    if (src->ranges_cnt > UINT16_MAX)
+        return -1;
+
     struct pal_range_info* ranges_arr = malloc(src->ranges_cnt * sizeof(*ranges_arr));
     if (!ranges_arr) {
         log_error("Range allocation failed");
@@ -150,6 +154,7 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
     return 0;
 }
 
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_src,
                                          size_t online_logical_cores_cnt,
                                          size_t cache_indices_cnt,
@@ -251,6 +256,7 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
     return 0;
 }
 
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* untrusted_src,
                                          size_t online_nodes_cnt,
                                          struct pal_numa_topo_info** out_numa_topo_arr) {
@@ -448,6 +454,7 @@ static int sanitize_socket_info(struct pal_core_topo_info* core_topo_arr,
     return 0;
 }
 
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int sanitize_core_topology_info(struct pal_core_topo_info* core_topo_arr,
                                        size_t online_logical_cores_cnt, size_t cache_indices_cnt,
                                        size_t sockets_cnt) {
@@ -549,6 +556,7 @@ out:
     return ret;
 }
 
+/* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int sanitize_numa_topology_info(struct pal_numa_topo_info* numa_topo_arr,
                                        size_t online_nodes_cnt, size_t online_logical_cores_cnt,
                                        size_t possible_logical_cores_cnt) {
@@ -906,7 +914,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* At this point we don't yet have memory manager, so we cannot allocate memory dynamically. */
     static char libpal_path[1024 + 1];
-    /* TODO: Fix untrusted pointer access by adding `READ_ONCE()`*/
+    /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_libpal_uri` by adding
+     * `READ_ONCE()`. */
     if (libpal_uri_len >= sizeof(libpal_path)
             || !sgx_copy_to_enclave(libpal_path, sizeof(libpal_path) - 1, uptr_libpal_uri,
                                     libpal_uri_len)) {
@@ -920,7 +929,8 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* We can't verify the following arguments from the urts. So we copy them directly but need to
      * be careful when we use them. */
-     /* TODO: Fix untrusted pointer access by adding `READ_ONCE()`*/
+     /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_qe_targetinfo` by
+      * adding `READ_ONCE()`. */
     if (!sgx_copy_to_enclave(&g_pal_linuxsgx_state.qe_targetinfo,
                              sizeof(g_pal_linuxsgx_state.qe_targetinfo),
                              uptr_qe_targetinfo,

@@ -127,17 +127,20 @@ fail:
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
                                           struct pal_res_range_info* dest) {
-    if (src->ranges_cnt > UINT16_MAX)
+    size_t range_arr_size;
+    if (__builtin_mul_overflow(src->ranges_cnt, sizeof(struct pal_range_info), &range_arr_size)) {
+        log_error("Overflow detected with size of ranges_arr memory allocation request");
         return -1;
+    }
 
-    struct pal_range_info* ranges_arr = malloc(src->ranges_cnt * sizeof(*ranges_arr));
+    struct pal_range_info* ranges_arr = malloc(range_arr_size);
     if (!ranges_arr) {
         log_error("Range allocation failed");
         return -1;
     }
 
     /* Even though `src` points to a safe in-enclave object, the `src->ranges_arr` pointer is
-     * untrusted and may maliciously point to inside the enclave; thus need to use
+     * untrusted and may maliciously point inside the enclave; thus need to use
      * `sgx_copy_to_enclave()` function */
     if (!sgx_copy_to_enclave(ranges_arr, src->ranges_cnt * sizeof(*ranges_arr),
                              src->ranges_arr, src->ranges_cnt * sizeof(*src->ranges_arr))) {
@@ -152,7 +155,7 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_src,
+static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* uptr_src,
                                          size_t online_logical_cores_cnt,
                                          size_t cache_indices_cnt,
                                          struct pal_core_topo_info** out_core_topo_arr) {
@@ -165,10 +168,10 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
         return -1;
     }
 
-    /* Shallow copy contents of core_topo_arr (untrusted_src) into enclave */
+    /* Shallow copy contents of core_topo_arr (uptr_src) into enclave */
     if (!sgx_copy_to_enclave(temp_core_topo_arr,
-                             online_logical_cores_cnt * sizeof(*temp_core_topo_arr), untrusted_src,
-                             online_logical_cores_cnt * sizeof(*untrusted_src))) {
+                             online_logical_cores_cnt * sizeof(*temp_core_topo_arr), uptr_src,
+                             online_logical_cores_cnt * sizeof(*uptr_src))) {
         log_error("Shallow copy of core_topo_arr into the enclave failed");
         return -1;
     }
@@ -254,7 +257,7 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* untrusted_src,
+static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* uptr_src,
                                          size_t online_nodes_cnt,
                                          struct pal_numa_topo_info** out_numa_topo_arr) {
     assert(out_numa_topo_arr);
@@ -266,10 +269,10 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* untrusted_sr
         return -1;
     }
 
-    /* Shallow copy contents of numa_topo_arr (untrusted_src) into enclave */
+    /* Shallow copy contents of numa_topo_arr (uptr_src) into enclave */
     if (!sgx_copy_to_enclave(temp_numa_topo_arr,
-                             online_nodes_cnt * sizeof(*temp_numa_topo_arr), untrusted_src,
-                             online_nodes_cnt * sizeof(*untrusted_src))) {
+                             online_nodes_cnt * sizeof(*temp_numa_topo_arr), uptr_src,
+                             online_nodes_cnt * sizeof(*uptr_src))) {
         log_error("Shallow copy of numa_topo_arr into the enclave failed");
         return -1;
     }

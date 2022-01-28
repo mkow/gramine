@@ -310,68 +310,37 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* uptr_src,
     return 0;
 }
 
-/* This function does the following 3 sanitizations for a given resource range:
- * 1. Ensures the resource as well as range count doesn't exceed limits.
- * 2. Ensures that ranges don't overlap like "1-5, 3-4".
- * 3. Ensures the ranges aren't malformed like "1-5, 7-1".
- * Returns -1 error on failure and 0 on success.
+/* This function checks the following:
+ * - the ranges are sorted and non-overlapping
+ * - the ranges and the count of elements inside them fit inside given limits
  */
 static int sanitize_hw_resource_range(struct pal_res_range_info* res_info, size_t res_min_limit,
                                       size_t res_max_limit, size_t range_min_limit,
                                       size_t range_max_limit) {
     size_t resource_cnt = res_info->resource_cnt;
-    if (!IS_IN_RANGE_INCL(resource_cnt, res_min_limit, res_max_limit)) {
-        log_error("Invalid resource count: %zu", resource_cnt);
+    if (!IS_IN_RANGE_INCL(resource_cnt, res_min_limit, res_max_limit))
+        return -1;
+
+    if (res_info->ranges_arr[0].start < range_min_limit ||
+        res_info->ranges_arr[resource_cnt-1].end > range_max_limit) {
         return -1;
     }
 
-    size_t ranges_cnt = res_info->ranges_cnt;
-    if (!IS_IN_RANGE_INCL(ranges_cnt, 1, 1 << 7)) {
-        log_error("Invalid range count: %zu", ranges_cnt);
-        return -1;
-    }
-
-    if (!res_info->ranges_arr)
-        return -1;
-
-    bool check_for_overlaps = false;
-    size_t previous_end = 0;
+    size_t next_nonoverlapping_start = 0; // used for ensuring that the ranges don't overlap
     size_t resource_cnt_from_ranges = 0;
-    for (size_t i = 0; i < ranges_cnt; i++) {
-
+    for (size_t i = 0; i < res_info->ranges_cnt; i++) {
         size_t start = res_info->ranges_arr[i].start;
         size_t end = res_info->ranges_arr[i].end;
 
-        /* Ensure start and end fall within range limits */
-        if (!IS_IN_RANGE_INCL(start, range_min_limit, range_max_limit)) {
-            log_error("Invalid start of range: %zu", start);
+        if (start > end || start < next_nonoverlapping_start || end == (size_t)-1)
             return -1;
-        }
-
-        if ((start != end) && !IS_IN_RANGE_INCL(end, start + 1, range_max_limit)) {
-            log_error("Invalid end of range: %zu", end);
-            return -1;
-        }
-
+        // overflows below are impossible because of the checks above
         resource_cnt_from_ranges += end - start + 1;
-
-        /* check for overlaps like "1-5, 3-4". Note: we skip this check for first time as
-         *`previous_end` is not yet initialized. */
-        if (check_for_overlaps && previous_end >= start) {
-            log_error("Overlapping ranges: previous_end = %zu, current start = %zu", previous_end,
-                      start);
-            return -1;
-        }
-        previous_end = end;
-
-        /* Start checking for overlaps after the first range */
-        check_for_overlaps = true;
+        next_nonoverlapping_start = end + 1;
     }
 
-    if (resource_cnt_from_ranges != resource_cnt) {
-        log_error("Mismatch between resource_cnt and resource_cnt_from_ranges");
+    if (resource_cnt_from_ranges != resource_cnt)
         return -1;
-    }
 
     return 0;
 }

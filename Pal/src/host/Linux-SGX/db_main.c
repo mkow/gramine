@@ -86,8 +86,6 @@ static const char** make_argv_list(void* uptr_src, size_t src_size) {
         return NULL;
     }
 
-    /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_src` by adding
-     * `READ_ONCE()`. */
     if (!sgx_copy_to_enclave(data, src_size, uptr_src, src_size)) {
         goto fail;
     }
@@ -142,8 +140,7 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
      * untrusted and may maliciously point to inside the enclave; thus need to use
      * `sgx_copy_to_enclave()` function */
     if (!sgx_copy_to_enclave(ranges_arr, src->ranges_cnt * sizeof(*ranges_arr),
-                             READ_ONCE(src->ranges_arr),
-                             src->ranges_cnt * sizeof(*src->ranges_arr))) {
+                             src->ranges_arr, src->ranges_cnt * sizeof(*src->ranges_arr))) {
         log_error("Copying ranges into the enclave failed");
         return -1;
     }
@@ -170,8 +167,8 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
 
     /* Shallow copy contents of core_topo_arr (untrusted_src) into enclave */
     if (!sgx_copy_to_enclave(temp_core_topo_arr,
-            online_logical_cores_cnt * sizeof(*temp_core_topo_arr), READ_ONCE(untrusted_src),
-            online_logical_cores_cnt * sizeof(*untrusted_src))) {
+                             online_logical_cores_cnt * sizeof(*temp_core_topo_arr), untrusted_src,
+                             online_logical_cores_cnt * sizeof(*untrusted_src))) {
         log_error("Shallow copy of core_topo_arr into the enclave failed");
         return -1;
     }
@@ -214,7 +211,7 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* untrusted_sr
 
         if (!sgx_copy_to_enclave(temp_cache_info_arr,
                                  cache_indices_cnt * sizeof(*temp_cache_info_arr),
-                                 READ_ONCE(temp_core_topo_arr->cache_info_arr),
+                                 temp_core_topo_arr->cache_info_arr,
                                  cache_indices_cnt *
                                  sizeof(*temp_core_topo_arr->cache_info_arr))) {
             log_error("Shallow copy of cache_info_arr into the enclave failed");
@@ -271,8 +268,8 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* untrusted_sr
 
     /* Shallow copy contents of numa_topo_arr (untrusted_src) into enclave */
     if (!sgx_copy_to_enclave(temp_numa_topo_arr,
-            online_nodes_cnt * sizeof(*temp_numa_topo_arr), READ_ONCE(untrusted_src),
-            online_nodes_cnt * sizeof(*untrusted_src))) {
+                             online_nodes_cnt * sizeof(*temp_numa_topo_arr), untrusted_src,
+                             online_nodes_cnt * sizeof(*untrusted_src))) {
         log_error("Shallow copy of numa_topo_arr into the enclave failed");
         return -1;
     }
@@ -465,14 +462,6 @@ static int sanitize_core_topology_info(struct pal_core_topo_info* core_topo_arr,
         return -1;
 
     for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
-        if (idx != 0) {     /* core 0 is always online */
-            bool is_core_online = core_topo_arr[idx].is_logical_core_online;
-            if (is_core_online != false && is_core_online != true) {
-                ret = -1;
-                goto out;
-            }
-        }
-
         if (core_topo_arr[idx].core_id > online_logical_cores_cnt - 1) {
             ret = -1;
             goto out;
@@ -748,7 +737,7 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
      * g_pal_public_state */
     struct pal_topo_info temp_topo_info;
     if (!sgx_copy_to_enclave(&temp_topo_info, sizeof(temp_topo_info),
-                             READ_ONCE(uptr_topo_info), sizeof(*uptr_topo_info))) {
+                             uptr_topo_info, sizeof(*uptr_topo_info))) {
         log_error("Copying topo_info into the enclave failed");
         return -1;
     }
@@ -914,8 +903,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* At this point we don't yet have memory manager, so we cannot allocate memory dynamically. */
     static char libpal_path[1024 + 1];
-    /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_libpal_uri` by adding
-     * `READ_ONCE()`. */
     if (libpal_uri_len >= sizeof(libpal_path)
             || !sgx_copy_to_enclave(libpal_path, sizeof(libpal_path) - 1, uptr_libpal_uri,
                                     libpal_uri_len)) {
@@ -929,8 +916,6 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
 
     /* We can't verify the following arguments from the urts. So we copy them directly but need to
      * be careful when we use them. */
-     /* TODO: Fix potential compiler optimization of untrusted pointer `uptr_qe_targetinfo` by
-      * adding `READ_ONCE()`. */
     if (!sgx_copy_to_enclave(&g_pal_linuxsgx_state.qe_targetinfo,
                              sizeof(g_pal_linuxsgx_state.qe_targetinfo),
                              uptr_qe_targetinfo,

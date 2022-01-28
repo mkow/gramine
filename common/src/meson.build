@@ -1,5 +1,6 @@
 common_src = files(
     'avl_tree.c',
+    'bitmap.c',
     'init.c',
     'location.c',
     'network/hton.c',

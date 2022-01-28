@@ -12,17 +12,27 @@
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
+static bool is_online(size_t ind, const void* _topo_info) {
+    struct pal_topo_info* topo_info = (struct pal_topo_info*)_topo_info;
+    return topo_info->cores[ind].is_online;
+}
+
+static bool return_true(size_t ind, const void* arg) {
+    __UNUSED(ind);
+    __UNUSED(arg);
+    return true;
+}
+
 int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
+    const struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
     const char* name = dent->name;
-    char str[PAL_SYSFS_BUF_FILESZ] = {'\0'};
+    char str[PAL_SYSFS_BUF_FILESZ];
 
     if (strcmp(name, "online") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.online_logical_cores, ",",
-                                        str, sizeof(str));
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->cores_cnt, is_online, topo_info);
     } else if (strcmp(name, "possible") == 0) {
-        ret = sys_convert_ranges_to_str(&g_pal_public_state->topo_info.possible_logical_cores, ",",
-                                        str, sizeof(str));
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->cores_cnt, return_true, NULL);
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;
@@ -42,23 +52,28 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    struct pal_core_topo_info* core_topology =
-        &g_pal_public_state->topo_info.core_topo_arr[cpu_num];
+    struct pal_core_info* core_info = &g_pal_public_state->topo_info.cores[cpu_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "online") == 0) {
         /* `cpu/cpuX/online` is not present for cpu0 */
         if (cpu_num == 0)
             return -ENOENT;
-        ret = snprintf(str, sizeof(str), "%d\n", core_topology->is_logical_core_online);
+        ret = snprintf(str, sizeof(str), "%d\n", (int)core_info->is_online);
     } else if (strcmp(name, "core_id") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->core_id);
+        /* Linux docs: "the CPU core ID of cpuX. Typically it is the hardware platform’s identifier
+         * (rather than the kernel’s). The actual value is architecture and platform dependent."
+         * So, let's just output the kernel ID instead and everything should be fine.
+         *
+         * TODO: can this trash hyper-threading-aware scheduling? or rather the libraries use
+         * *_siblings fields?
+         */
+        ret = snprintf(str, sizeof(str), "%u\n", cpu_num);
     } else if (strcmp(name, "physical_package_id") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->socket_id);
+        ret = snprintf(str, sizeof(str), "%zu\n", core_info->socket_id);
     } else if (strcmp(name, "core_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_topology->core_siblings, str, sizeof(str));
+        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->core_siblings, str, sizeof(str));
     } else if (strcmp(name, "thread_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_topology->thread_siblings, str,
-                                                   sizeof(str));
+        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->thread_siblings, str, sizeof(str));
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;

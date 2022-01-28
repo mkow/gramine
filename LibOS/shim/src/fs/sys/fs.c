@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2022 Intel Corporation
  *                    Vijay Dhanraj <vijay.dhanraj@intel.com>
+ *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
 /*
@@ -11,38 +12,69 @@
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
-                              char* str, size_t str_size) {
-    size_t ranges_cnt = resource_range_info->ranges_cnt;
-    if (!ranges_cnt)
-        return -EINVAL;
+int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
+                        bool (*is_present)(size_t ind, const void* arg), const void* callback_arg) {
+    size_t buf_pos = 0;
+    const char* sep = "";
+    for (size_t i = 0; i < count;) {
+        while (i < count && !is_present(i, callback_arg))
+            i++;
+        size_t range_start = i;
+        while (i < count && is_present(i, callback_arg))
+            i++;
+        size_t range_end = i; // exclusive
 
-    str[0] = '\0';
-    size_t offset = 0;
-    for (size_t i = 0; i < ranges_cnt; i++) {
-        if (offset >= str_size)
-            return -ENOMEM;
-
+        if (range_start == range_end)
+            break;
         int ret;
-        if (resource_range_info->ranges_arr[i].end == resource_range_info->ranges_arr[i].start) {
-            ret = snprintf(str + offset, str_size - offset, "%zu%s",
-                           resource_range_info->ranges_arr[i].start,
-                           (i + 1 == ranges_cnt) ? "\n" : sep);
+        if (range_start + 1 == range_end) {
+            ret = snprintf(buf + buf_pos, buf_size - buf_pos, "%s%zu", sep, range_start);
         } else {
-            ret = snprintf(str + offset, str_size - offset, "%zu-%zu%s",
-                           resource_range_info->ranges_arr[i].start,
-                           resource_range_info->ranges_arr[i].end,
-                           (i + 1 == ranges_cnt) ? "\n" : sep);
+            ret = snprintf(buf + buf_pos, buf_size - buf_pos, "%s%zu-%zu", sep, range_start,
+                           range_end - 1);
         }
-
+        sep = ",";
         if (ret < 0)
             return ret;
-
-        /* Truncation has occurred */
-        if ((size_t)ret >= str_size - offset)
+        if ((size_t)ret >= buf_size - buf_pos)
             return -EOVERFLOW;
+        buf_pos += ret;
+    }
+    if (buf_pos + 2 > buf_size)
+        return -EOVERFLOW;
+    buf[buf_pos] =   '\n';
+    buf[buf_pos+1] = '\0';
+    return 0;
+}
 
-        offset += ret;
+int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
+                         bool (*is_present)(size_t ind, const void* arg),
+                         const void* callback_arg) {
+    size_t buf_pos = 0;
+    int ret;
+
+    size_t pos = count ? count - 1 : 0;
+    uint32_t word = 0;
+    while (1) {
+        if (is_present(pos, callback_arg))
+            word |= (1 << pos % 32);
+        if (pos % 32 == 0) {
+            if (count <= 32) // Linux sysfs quirk for small bitmasks
+                ret = snprintf(buf, buf_size, "%x\n", word); // pos == 0, loop exits afterwards
+            else
+                ret = snprintf(buf + buf_pos, buf_size - buf_pos,
+                               "%08x%c", word, pos != 0 ? ',' : '\n');
+            if (ret < 0)
+                return ret;
+            if ((size_t)ret >= buf_size - buf_pos)
+                return -EOVERFLOW;
+            buf_pos += ret;
+            word = 0;
+        }
+
+        if (pos == 0)
+            break;
+        pos--;
     }
     return 0;
 }
@@ -52,8 +84,7 @@ int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resour
     int ret;
 
     /* Extract cpumask from the ranges */
-    size_t possible_logical_cores_cnt =
-        g_pal_public_state->topo_info.possible_logical_cores.resource_cnt;
+    size_t possible_logical_cores_cnt = g_pal_public_state->topo_info.cores_cnt;
     size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
     assert(cpumask_cnt > 0);
 
@@ -116,10 +147,10 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        total = g_pal_public_state->topo_info.online_nodes.resource_cnt;
+        total = g_pal_public_state->topo_info.nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        total = g_pal_public_state->topo_info.online_logical_cores.resource_cnt;
+        total = g_pal_public_state->topo_info.cores_cnt;
         prefix = "cpu";
     } else if (strcmp(parent_name, "cache") == 0) {
         total = g_pal_public_state->topo_info.cache_indices_cnt;
@@ -227,6 +258,7 @@ static void init_cpu_dir(struct pseudo_node* cpu) {
 
 static void init_node_dir(struct pseudo_node* node) {
     pseudo_add_str(node, "online", &sys_node_general_load);
+    pseudo_add_str(node, "possible", &sys_node_general_load);
 
     struct pseudo_node* nodeX = pseudo_add_dir(node, NULL);
     nodeX->name_exists = &sys_resource_name_exists;

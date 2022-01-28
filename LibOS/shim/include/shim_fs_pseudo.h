@@ -219,11 +219,16 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size);
 bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name);
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg);
 
-/* Converts struct pal_res_range_info to a string representation.
- * Example output when sep == ',': "10-63,68,70-127".
- * Note: This function adds a newline at the end of the string. */
-int sys_convert_ranges_to_str(const struct pal_res_range_info* resource_range_info, const char* sep,
-                              char* str, size_t str_size);
+/* Prints into the sysfs ranges format (e.g. "10-63,68,70-127\n"). */
+int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
+                        bool (*is_present)(size_t ind, const void* arg), const void* callback_arg);
+
+/* Prints into the sysfs bitmask format, with bitmask size based on `count`.
+ * Example: count=64, 0-15,48-55 present: "00ff0000,0000ffff\n".
+ */
+int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
+                         bool (*is_present)(size_t ind, const void* arg),
+                         const void* callback_arg);
 
 /* Converts struct pal_res_range_info to a sysfs CPU bitmask representation with bitmask size based
  * on the possible cores count in the system.

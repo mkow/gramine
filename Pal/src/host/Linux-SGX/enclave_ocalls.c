@@ -1890,22 +1890,26 @@ int ocall_sched_setaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {
 }
 
 static bool is_cpumask_valid(void* cpu_mask, size_t cpumask_size) {
-    size_t max_cpumask_bits = cpumask_size * BITS_IN_BYTE;
-    size_t valid_cpumask_bits = g_pal_public_state.topo_info.online_logical_cores.resource_cnt;
-    size_t invalid_bits = max_cpumask_bits - valid_cpumask_bits;
+    // TODO: rework everything here
+    __UNUSED(cpu_mask);
+    __UNUSED(cpumask_size);
+    return true;
+    // size_t max_cpumask_bits = cpumask_size * BITS_IN_BYTE;
+    // size_t valid_cpumask_bits = g_pal_public_state.topo_info.online_logical_cores.resource_cnt;
+    // size_t invalid_bits = max_cpumask_bits - valid_cpumask_bits;
 
-    if (invalid_bits == 0)
-        return true;
+    // if (invalid_bits == 0)
+    //     return true;
 
-    /* create an invalid cpu_mask bits */
-    unsigned long invalid_cpumask = SET_HIGHEST_N_BITS(unsigned long, invalid_bits);
+    // /* create an invalid cpu_mask bits */
+    // unsigned long invalid_cpumask = SET_HIGHEST_N_BITS(unsigned long, invalid_bits);
 
-    /* Extract last 64bits to check if any invalid cpu bits are set */
-    assert(cpumask_size >= sizeof(unsigned long));
-    size_t idx = (cpumask_size / sizeof(unsigned long)) - 1;
-    unsigned long cpumask = ((unsigned long*)cpu_mask)[idx];
+    // /* Extract last 64bits to check if any invalid cpu bits are set */
+    // assert(cpumask_size >= sizeof(unsigned long));
+    // size_t idx = (cpumask_size / sizeof(unsigned long)) - 1;
+    // unsigned long cpumask = ((unsigned long*)cpu_mask)[idx];
 
-    return !(cpumask & invalid_cpumask);
+    // return !(cpumask & invalid_cpumask);
 }
 
 int ocall_sched_getaffinity(void* tcs, size_t cpumask_size, void* cpu_mask) {

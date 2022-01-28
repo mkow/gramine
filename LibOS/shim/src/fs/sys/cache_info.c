@@ -8,9 +8,17 @@
  * sub-directories.
  */
 
+#include <stdbool.h>
+
 #include "api.h"
+#include "bitmap.h"
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
+
+static bool bitmap_get_callback(size_t pos, const void* _bitmap) {
+    const struct bitmap* bitmap = (const struct bitmap*)_bitmap;
+    return bitmap_get(bitmap, pos);
+}
 
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
@@ -27,10 +35,11 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
 
     const char* name = dent->name;
     struct pal_core_cache_info* cache_info =
-        &g_pal_public_state->topo_info.core_topo_arr[cpu_num].cache_info_arr[cache_num];
+        &g_pal_public_state->topo_info.cores[cpu_num].cache_info_arr[cache_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "shared_cpu_map") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&cache_info->shared_cpu_map, str, sizeof(str));
+        ret = sys_print_as_bitmask(str, sizeof(str), bitmap_get_end(&cache_info->shared_cpus),
+                                   bitmap_get_callback, &cache_info->shared_cpus);
     } else if (strcmp(name, "level") == 0) {
         ret = snprintf(str, sizeof(str), "%zu\n", cache_info->level);
     } else if (strcmp(name, "type") == 0) {

@@ -116,14 +116,27 @@ fail:
     return NULL;
 }
 
+static int copy_bitmap_to_enclave(struct bitmap* uptr_src, struct bitmap* dst) {
+    if (!sgx_copy_to_enclave(dst, sizeof(*dst), uptr_src, sizeof(*uptr_src)))
+        return -1;
+    size_t size;
+    if (__builtin_mul_overflow(dst->buckets_cnt, sizeof(*dst->buckets), &size))
+        return -1;
+    void* buf = malloc(size);
+    if (!buf)
+        return -1;
+    if (!sgx_copy_to_enclave(buf, size, dst->buckets, size))
+        return -1;
+    dst->buckets = buf;
+    return 0;
+}
+
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
                                           struct pal_res_range_info* dest) {
     size_t ranges_arr_size;
-    if (__builtin_mul_overflow(src->ranges_cnt, sizeof(struct pal_range_info), &ranges_arr_size)) {
-        log_error("Overflow detected with size of ranges_arr memory allocation request");
+    if (__builtin_mul_overflow(src->ranges_cnt, sizeof(struct pal_range_info), &ranges_arr_size))
         return -1;
-    }
 
     struct pal_range_info* ranges_arr = malloc(ranges_arr_size);
     if (!ranges_arr) {
@@ -134,8 +147,7 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
     /* Even though `src` points to a safe in-enclave object, the `src->ranges_arr` pointer is
      * untrusted and may maliciously point inside the enclave; thus need to use
      * `sgx_copy_to_enclave()` function */
-    if (!sgx_copy_to_enclave(ranges_arr, ranges_arr_size,
-                             src->ranges_arr, src->ranges_cnt * sizeof(*src->ranges_arr))) {
+    if (!sgx_copy_to_enclave(ranges_arr, ranges_arr_size, src->ranges_arr, ranges_arr_size)) {
         log_error("Copying ranges into the enclave failed");
         return -1;
     }
@@ -147,52 +159,41 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* uptr_src,
-                                         size_t online_logical_cores_cnt,
+static int sgx_copy_core_topo_to_enclave(struct pal_core_info* uptr_src,
+                                         size_t cores_cnt,
                                          size_t cache_indices_cnt,
-                                         struct pal_core_topo_info** out_core_topo_arr) {
-    assert(out_core_topo_arr);
-
-    struct pal_core_topo_info* temp_core_topo_arr =
-        malloc(online_logical_cores_cnt * sizeof(*temp_core_topo_arr));
-    if (!temp_core_topo_arr) {
-        log_error("Allocation for shallow copy of core_topo_arr failed");
+                                         struct pal_core_info** out_core_arr) {
+    struct pal_core_info* temp_cores_arr = malloc(cores_cnt * sizeof(*temp_cores_arr));
+    if (!temp_cores_arr) {
         return -1;
     }
 
-    /* Shallow copy contents of core_topo_arr (uptr_src) into enclave */
-    if (!sgx_copy_to_enclave(temp_core_topo_arr,
-                             online_logical_cores_cnt * sizeof(*temp_core_topo_arr), uptr_src,
-                             online_logical_cores_cnt * sizeof(*uptr_src))) {
-        log_error("Shallow copy of core_topo_arr into the enclave failed");
+    /* Shallow copy contents of `cores` (uptr_src) into enclave */
+    if (!sgx_copy_to_enclave(temp_cores_arr,
+                             cores_cnt * sizeof(*temp_cores_arr), uptr_src,
+                             cores_cnt * sizeof(*uptr_src))) {
         return -1;
     }
 
     /* Allocate enclave memory to store core topo info */
-    struct pal_core_topo_info* core_topo_arr =
-        malloc(online_logical_cores_cnt * sizeof(*core_topo_arr));
+    struct pal_core_info* core_topo_arr = malloc(cores_cnt * sizeof(*core_topo_arr));
     if (!core_topo_arr) {
-        log_error("Allocation for core topology array failed");
         return -1;
     }
 
-    for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
-        core_topo_arr[idx].is_logical_core_online =
-            temp_core_topo_arr[idx].is_logical_core_online;
-        core_topo_arr[idx].core_id = temp_core_topo_arr[idx].core_id;
-        core_topo_arr[idx].socket_id = temp_core_topo_arr[idx].socket_id;
+    for (size_t idx = 0; idx < cores_cnt; idx++) {
+        core_topo_arr[idx].is_online = temp_cores_arr[idx].is_online;
+        core_topo_arr[idx].socket_id = temp_cores_arr[idx].socket_id;
 
-        int ret = copy_resource_range_to_enclave(&temp_core_topo_arr[idx].core_siblings,
+        int ret = copy_resource_range_to_enclave(&temp_cores_arr[idx].core_siblings,
                                                  &core_topo_arr[idx].core_siblings);
         if (ret < 0) {
-            log_error("Copying core_topo_arr[%zu].core_siblings failed", idx);
             return -1;
         }
 
-        ret = copy_resource_range_to_enclave(&temp_core_topo_arr[idx].thread_siblings,
+        ret = copy_resource_range_to_enclave(&temp_cores_arr[idx].thread_siblings,
                                              &core_topo_arr[idx].thread_siblings);
         if (ret < 0) {
-            log_error("Copying core_topo_arr[%zu].thread_siblings failed", idx);
             return -1;
         }
 
@@ -200,16 +201,14 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* uptr_src,
         struct pal_core_cache_info* temp_cache_info_arr =
             malloc(cache_indices_cnt * sizeof(*temp_cache_info_arr));
         if (!temp_cache_info_arr) {
-            log_error("Allocation for shallow copy of cache_info_arr failed");
             return -1;
         }
 
         if (!sgx_copy_to_enclave(temp_cache_info_arr,
                                  cache_indices_cnt * sizeof(*temp_cache_info_arr),
-                                 temp_core_topo_arr->cache_info_arr,
+                                 temp_cores_arr->cache_info_arr,
                                  cache_indices_cnt *
-                                 sizeof(*temp_core_topo_arr->cache_info_arr))) {
-            log_error("Shallow copy of cache_info_arr into the enclave failed");
+                                 sizeof(*temp_cores_arr->cache_info_arr))) {
             return -1;
         }
 
@@ -217,23 +216,20 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* uptr_src,
         struct pal_core_cache_info* cache_info_arr =
             malloc(cache_indices_cnt * sizeof(*cache_info_arr));
         if (!cache_info_arr) {
-            log_error("Allocation for cache_info_arr failed");
             return -1;
         }
 
-        for (size_t lvl = 0; lvl < cache_indices_cnt; lvl++) {
-            cache_info_arr[lvl].level = temp_cache_info_arr[lvl].level;
-            cache_info_arr[lvl].type = temp_cache_info_arr[lvl].type;
-            cache_info_arr[lvl].size = temp_cache_info_arr[lvl].size;
-            cache_info_arr[lvl].coherency_line_size = temp_cache_info_arr[lvl].coherency_line_size;
-            cache_info_arr[lvl].number_of_sets = temp_cache_info_arr[lvl].number_of_sets;
-            cache_info_arr[lvl].physical_line_partition =
-                 temp_cache_info_arr[lvl].physical_line_partition;
+        for (size_t i = 0; i < cache_indices_cnt; i++) {
+            cache_info_arr[i].level = temp_cache_info_arr[i].level;
+            cache_info_arr[i].type = temp_cache_info_arr[i].type;
+            cache_info_arr[i].size = temp_cache_info_arr[i].size;
+            cache_info_arr[i].coherency_line_size = temp_cache_info_arr[i].coherency_line_size;
+            cache_info_arr[i].number_of_sets = temp_cache_info_arr[i].number_of_sets;
+            cache_info_arr[i].physical_line_partition = temp_cache_info_arr[i].physical_line_partition;
 
-            ret = copy_resource_range_to_enclave(&temp_cache_info_arr[lvl].shared_cpu_map,
-                                                 &cache_info_arr[lvl].shared_cpu_map);
+            ret = copy_bitmap_to_enclave(&temp_cache_info_arr[i].shared_cpus,
+                                         &cache_info_arr[i].shared_cpus);
             if (ret < 0) {
-                log_error("Copying cache_info_arr[%zu].shared_cpu_map failed", lvl);
                 return -1;
             }
         }
@@ -242,56 +238,43 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_topo_info* uptr_src,
         free(temp_cache_info_arr);
     }
 
-    *out_core_topo_arr = core_topo_arr;
+    *out_core_arr = core_topo_arr;
 
-    free(temp_core_topo_arr);
+    free(temp_cores_arr);
     return 0;
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* uptr_src,
-                                         size_t online_nodes_cnt,
-                                         struct pal_numa_topo_info** out_numa_topo_arr) {
+static int sgx_copy_numa_topo_to_enclave(struct pal_numa_node_info* uptr_src,
+                                         size_t nodes_cnt,
+                                         struct pal_numa_node_info** out_numa_topo_arr) {
     assert(out_numa_topo_arr);
 
-    struct pal_numa_topo_info* temp_numa_topo_arr =
-        malloc(online_nodes_cnt * sizeof(*temp_numa_topo_arr));
+    struct pal_numa_node_info* temp_numa_topo_arr = malloc(nodes_cnt * sizeof(*temp_numa_topo_arr));
     if (!temp_numa_topo_arr) {
-        log_error("Allocation for shallow copy of numa_topo_arr failed");
         return -1;
     }
 
     /* Shallow copy contents of numa_topo_arr (uptr_src) into enclave */
     if (!sgx_copy_to_enclave(temp_numa_topo_arr,
-                             online_nodes_cnt * sizeof(*temp_numa_topo_arr), uptr_src,
-                             online_nodes_cnt * sizeof(*uptr_src))) {
-        log_error("Shallow copy of numa_topo_arr into the enclave failed");
+                             nodes_cnt * sizeof(*temp_numa_topo_arr), uptr_src,
+                             nodes_cnt * sizeof(*uptr_src))) {
         return -1;
     }
 
-    struct pal_numa_topo_info* numa_topo_arr = malloc(online_nodes_cnt * sizeof(*numa_topo_arr));
+    struct pal_numa_node_info* numa_topo_arr = malloc(nodes_cnt * sizeof(*numa_topo_arr));
     if (!numa_topo_arr) {
-        log_error("Allocation for numa_topo_arr failed");
         return -1;
     }
 
-    for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_2M] =
-            temp_numa_topo_arr[idx].nr_hugepages[HUGEPAGES_2M];
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_1G] =
-            temp_numa_topo_arr[idx].nr_hugepages[HUGEPAGES_1G];
+    for (size_t i = 0; i < nodes_cnt; i++) {
+        numa_topo_arr[i].is_online = temp_numa_topo_arr[i].is_online;
+        numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M];
+        numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G];
 
-        int ret = copy_resource_range_to_enclave(&temp_numa_topo_arr[idx].cpumap,
-                                                 &numa_topo_arr[idx].cpumap);
+        int ret = copy_resource_range_to_enclave(&temp_numa_topo_arr[i].cpumap,
+                                                 &numa_topo_arr[i].cpumap);
         if (ret < 0) {
-            log_error("Copying numa_topo_arr[%zu].cpumap failed", idx);
-            return -1;
-        }
-
-        ret = copy_resource_range_to_enclave(&temp_numa_topo_arr[idx].distance,
-                                             &numa_topo_arr[idx].distance);
-        if (ret < 0) {
-            log_error("Copying numa_topo_arr[%zu].distance failed", idx);
             return -1;
         }
     }
@@ -302,113 +285,81 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_topo_info* uptr_src,
     return 0;
 }
 
-/* This function does the following 3 sanitizations for a given resource range:
- * 1. Ensures the resource as well as range count doesn't exceed limits.
- * 2. Ensures that ranges don't overlap like "1-5, 3-4".
- * 3. Ensures the ranges aren't malformed like "1-5, 7-1".
- * Returns -1 error on failure and 0 on success.
+/* This function checks the following:
+ * - the ranges are sorted and non-overlapping
+ * - the ranges and the count of elements inside them fit inside given limits
  */
 static int sanitize_hw_resource_range(struct pal_res_range_info* res_info, size_t res_min_limit,
                                       size_t res_max_limit, size_t range_min_limit,
                                       size_t range_max_limit) {
     size_t resource_cnt = res_info->resource_cnt;
-    if (!IS_IN_RANGE_INCL(resource_cnt, res_min_limit, res_max_limit)) {
-        log_error("Invalid resource count: %zu", resource_cnt);
+    if (!IS_IN_RANGE_INCL(resource_cnt, res_min_limit, res_max_limit))
+        return -1;
+
+    if (res_info->ranges_arr[0].start < range_min_limit ||
+        res_info->ranges_arr[resource_cnt-1].end > range_max_limit) {
         return -1;
     }
 
-    size_t ranges_cnt = res_info->ranges_cnt;
-    if (!IS_IN_RANGE_INCL(ranges_cnt, 1, 1 << 7)) {
-        log_error("Invalid range count: %zu", ranges_cnt);
-        return -1;
-    }
-
-    if (!res_info->ranges_arr)
-        return -1;
-
-    bool check_for_overlaps = false;
-    size_t previous_end = 0;
+    size_t next_nonoverlapping_start = 0; // used for ensuring that the ranges don't overlap
     size_t resource_cnt_from_ranges = 0;
-    for (size_t i = 0; i < ranges_cnt; i++) {
-
+    for (size_t i = 0; i < res_info->ranges_cnt; i++) {
         size_t start = res_info->ranges_arr[i].start;
         size_t end = res_info->ranges_arr[i].end;
 
-        /* Ensure start and end fall within range limits */
-        if (!IS_IN_RANGE_INCL(start, range_min_limit, range_max_limit)) {
-            log_error("Invalid start of range: %zu", start);
+        if (start > end || start < next_nonoverlapping_start || end == (size_t)-1)
             return -1;
-        }
-
-        if ((start != end) && !IS_IN_RANGE_INCL(end, start + 1, range_max_limit)) {
-            log_error("Invalid end of range: %zu", end);
-            return -1;
-        }
-
+        // overflows below are impossible because of the checks above
         resource_cnt_from_ranges += end - start + 1;
-
-        /* check for overlaps like "1-5, 3-4". Note: we skip this check for first time as
-         *`previous_end` is not yet initialized. */
-        if (check_for_overlaps && previous_end >= start) {
-            log_error("Overlapping ranges: previous_end = %zu, current start = %zu", previous_end,
-                      start);
-            return -1;
-        }
-        previous_end = end;
-
-        /* Start checking for overlaps after the first range */
-        check_for_overlaps = true;
+        next_nonoverlapping_start = end + 1;
     }
 
-    if (resource_cnt_from_ranges != resource_cnt) {
-        log_error("Mismatch between resource_cnt and resource_cnt_from_ranges");
+    if (resource_cnt_from_ranges != resource_cnt)
         return -1;
-    }
 
     return 0;
 }
 
-static int sanitize_cache_topology_info(struct pal_core_cache_info* cache_info_arr,
-                                        size_t online_logical_cores_cnt, size_t cache_indices_cnt) {
-    for (size_t lvl = 0; lvl < cache_indices_cnt; lvl++) {
-        if (cache_info_arr[lvl].type != CACHE_TYPE_DATA &&
-            cache_info_arr[lvl].type != CACHE_TYPE_INSTRUCTION &&
-            cache_info_arr[lvl].type != CACHE_TYPE_UNIFIED) {
+static int sanitize_cache_topo_info(struct pal_core_cache_info* cache_info_arr,
+                                    size_t cores_cnt, size_t cache_indices_cnt) {
+    __UNUSED(cores_cnt); // TODO
+    for (size_t i = 0; i < cache_indices_cnt; i++) {
+        if (cache_info_arr[i].type != CACHE_TYPE_DATA &&
+            cache_info_arr[i].type != CACHE_TYPE_INSTRUCTION &&
+            cache_info_arr[i].type != CACHE_TYPE_UNIFIED) {
             return -1;
         }
 
-        size_t max_limit;
-        if (cache_info_arr[lvl].type == CACHE_TYPE_DATA ||
-                cache_info_arr[lvl].type == CACHE_TYPE_INSTRUCTION) {
-            /* Taking HT into account */
-            max_limit = MAX_HYPERTHREADS_PER_CORE;
-        } else {
-            /* if unified cache then it can range up to total number of cores. */
-            max_limit = online_logical_cores_cnt;
-        }
+        // size_t max_limit;
+        // if (cache_info_arr[i].type == CACHE_TYPE_DATA ||
+        //         cache_info_arr[i].type == CACHE_TYPE_INSTRUCTION) {
+        //     /* Taking HT into account */
+        //     max_limit = MAX_HYPERTHREADS_PER_CORE;
+        // } else {
+        //     /* if unified cache then it can range up to total number of cores. */
+        //     max_limit = cores_cnt;
+        // }
 
-        /* Recall that `shared_cpu_map` shows this core + its siblings (if HT is enabled), for
-         * example: /sys/devices/system/cpu/cpu1/cache/index1/shared_cpu_map: 00000000,00000002 */
-        int ret = sanitize_hw_resource_range(&cache_info_arr[lvl].shared_cpu_map, 1, max_limit, 0,
-                                             online_logical_cores_cnt);
-        if (ret < 0) {
-            log_error("Invalid cache[%zu].shared_cpu_map", lvl);
-            return -1;
-        }
+        // TODO: sanitize shared_cpus
+        // int ret = sanitize_hw_resource_range(&cache_info_arr[i].shared_cpus, 1, max_limit, 0,
+        //                                      cores_cnt);
+        // if (ret < 0) {
+        //     return -1;
+        // }
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].level, 1, MAX_CACHE_LEVELS))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[i].level, 1, MAX_CACHE_LEVELS))
             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].size, 1, 1 << 30))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[i].size, 1, 1 << 30))
             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].coherency_line_size, 1, 1 << 16))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[i].coherency_line_size, 1, 1 << 16))
             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].number_of_sets, 1, 1 << 30))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[i].number_of_sets, 1, 1 << 30))
             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[lvl].physical_line_partition, 1, 1 << 16))
+        if (!IS_IN_RANGE_INCL(cache_info_arr[i].physical_line_partition, 1, 1 << 16))
             return -1;
     }
     return 0;
@@ -421,7 +372,7 @@ static int sanitize_cache_topology_info(struct pal_core_cache_info* cache_info_a
  * - Verify that the "cores in the socket info" array is exactly the same as "core-siblings
  *   present in core topology" array.
  */
-static int sanitize_socket_info(struct pal_core_topo_info* core_topo_arr,
+static int sanitize_socket_info(struct pal_core_info* core_topo_arr,
                                 struct pal_res_range_info* socket_info_arr, size_t sockets_cnt) {
     for (size_t idx = 0; idx < sockets_cnt; idx++) {
         if (!socket_info_arr[idx].ranges_cnt || !socket_info_arr[idx].ranges_arr) {
@@ -447,40 +398,34 @@ static int sanitize_socket_info(struct pal_core_topo_info* core_topo_arr,
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sanitize_core_topology_info(struct pal_core_topo_info* core_topo_arr,
-                                       size_t online_logical_cores_cnt, size_t cache_indices_cnt,
-                                       size_t sockets_cnt) {
+static int sanitize_core_topo_info(struct pal_core_info* core_topo_arr,
+                                   size_t cores_cnt, size_t cache_indices_cnt,
+                                   size_t sockets_cnt) {
+    // TODO: rewrite
+    return 0;
     int ret;
-
     struct pal_res_range_info* socket_info_arr = calloc(sockets_cnt, sizeof(*socket_info_arr));
     if (!socket_info_arr)
         return -1;
 
-    for (size_t idx = 0; idx < online_logical_cores_cnt; idx++) {
-        if (core_topo_arr[idx].core_id > online_logical_cores_cnt - 1) {
-            ret = -1;
-            goto out;
-        }
-
+    for (size_t idx = 0; idx < cores_cnt; idx++) {
+        if (!core_topo_arr[idx].is_online)
+            continue;
         ret = sanitize_hw_resource_range(&core_topo_arr[idx].core_siblings, 1,
-                                         online_logical_cores_cnt, 0, online_logical_cores_cnt);
+                                         cores_cnt, 0, cores_cnt);
         if (ret < 0) {
-            log_error("Invalid core_topo_arr[%zu].core_siblings", idx);
             goto out;
         }
 
-        /* Max. SMT siblings currently supported on x86 processors is 4 */
         ret = sanitize_hw_resource_range(&core_topo_arr[idx].thread_siblings, 1,
-                                         MAX_HYPERTHREADS_PER_CORE, 0, online_logical_cores_cnt);
+                                         MAX_HYPERTHREADS_PER_CORE, 0, cores_cnt);
         if (ret < 0) {
-            log_error("Invalid core_topo_arr[%zu].thread_siblings", idx);
             goto out;
         }
 
-        ret = sanitize_cache_topology_info(core_topo_arr[idx].cache_info_arr,
-                                           online_logical_cores_cnt, cache_indices_cnt);
+        ret = sanitize_cache_topo_info(core_topo_arr[idx].cache_info_arr,
+                                       cores_cnt, cache_indices_cnt);
         if (ret < 0) {
-            log_error("Invalid core_topo_arr[%zu].cache_info_arr", idx);
             goto out;
         }
 
@@ -541,66 +486,57 @@ out:
 }
 
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
-static int sanitize_numa_topology_info(struct pal_numa_topo_info* numa_topo_arr,
-                                       size_t online_nodes_cnt, size_t online_logical_cores_cnt,
-                                       size_t possible_logical_cores_cnt) {
-    int ret;
-    size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
+static int sanitize_numa_topo_info(struct pal_numa_node_info* numa_topo_arr,
+                                   size_t online_nodes_cnt,
+                                   size_t possible_logical_cores_cnt) {
+    // TODO: rework everything here
+    __UNUSED(numa_topo_arr);
+    __UNUSED(online_nodes_cnt);
+    __UNUSED(possible_logical_cores_cnt);
+    return 0;
+//     int ret;
+//     size_t cpumask_cnt = BITS_TO_ULONGS(possible_logical_cores_cnt);
 
-    uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
-    if (!bitmap)
-        return -1;
+//     unsigned long* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
+//     if (!bitmap)
+//         return -1;
 
-    size_t total_cores_in_numa = 0;
-    for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
-        ret = sanitize_hw_resource_range(&numa_topo_arr[idx].cpumap, 1,
-                                         online_logical_cores_cnt, 0, online_logical_cores_cnt);
-        if (ret < 0) {
-            log_error("Invalid numa_topo_arr[%zu].cpumap", idx);
-            goto out;
-        }
+//     size_t total_cores_in_numa = 0;
+//     for (size_t idx = 0; idx < online_nodes_cnt; idx++) {
+//         ret = sanitize_hw_resource_range(&numa_topo_arr[idx].cpumap, 1,
+//                                          online_logical_cores_cnt, 0, online_logical_cores_cnt);
+//         if (ret < 0) {
+//             goto out;
+//         }
 
-        /* Ensure that each NUMA has unique cores */
-        for (size_t i = 0; i < numa_topo_arr[idx].cpumap.ranges_cnt; i++) {
-            size_t start = numa_topo_arr[idx].cpumap.ranges_arr[i].start;
-            size_t end = numa_topo_arr[idx].cpumap.ranges_arr[i].end;
-            for (size_t j = start; j <= end; j++) {
-                size_t index = j / BITS_IN_TYPE(uint32_t);
-                if (index >= cpumask_cnt) {
-                    log_error("Invalid numa topology: Core %zu is beyond CPU mask limit", j);
-                    ret = -1;
-                    goto out;
-                }
+//         /* Ensure that each NUMA has unique cores */
+//         for (size_t i = 0; i < numa_topo_arr[idx].cpumap.ranges_cnt; i++) {
+//             size_t start = numa_topo_arr[idx].cpumap.ranges_arr[i].start;
+//             size_t end = numa_topo_arr[idx].cpumap.ranges_arr[i].end;
+//             for (size_t j = start; j <= end; j++) {
+//                 size_t index = j / BITS_IN_TYPE(*bitmap);
+//                 unsigned long bit = 1UL << (j % BITS_IN_TYPE(*bitmap));
+//                 if (bitmap[index] & bit) {
+//                     ret = -1;
+//                     goto out;
+//                 }
+//                 bitmap[index] |= bit;
+//             }
+//         }
 
-                if (bitmap[index] & (1U << (j % BITS_IN_TYPE(uint32_t)))) {
-                    log_error("Invalid numa_topology: Core %zu found in multiple numa nodes", j);
-                    ret = -1;
-                    goto out;
-                }
-                bitmap[index] |= 1U << (j % BITS_IN_TYPE(uint32_t));
-                total_cores_in_numa++;
-            }
-        }
+//         total_cores_in_numa += numa_topo_arr[idx].cpumap.resource_cnt;
+//     }
 
-        size_t distances = numa_topo_arr[idx].distance.resource_cnt;
-        if (distances != online_nodes_cnt) {
-            log_error("Distance count is not same as the NUMA nodes count");
-            ret = -1;
-            goto out;
-        }
-    }
+//     if (total_cores_in_numa != online_logical_cores_cnt) {
+//         ret = -1;
+//         goto out;
+//     }
 
-    if (total_cores_in_numa != online_logical_cores_cnt) {
-        log_error("Invalid numa_topology: Mismatch between NUMA cores and online cores count");
-        ret = -1;
-        goto out;
-    }
+//     ret = 0;
 
-    ret = 0;
-
-out:
-    free(bitmap);
-    return ret;
+// out:
+//     free(bitmap);
+//     return ret;
 }
 
 extern void* g_enclave_base;
@@ -723,58 +659,27 @@ out:
     return ret;
 }
 
-static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
-                                       bool enable_sysfs_topology) {
+static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
+                                         bool enable_sysfs_topology) {
     int ret;
 
     /* Extract topology information from untrusted pointer. Note this is only a shallow copy
-     * and we use this temp variable to do deep copy into `topo_info` struct part of
-     * g_pal_public_state */
+     * and we use this temp variable to do deep copy into `g_pal_public_state.topo_info` */
     struct pal_topo_info temp_topo_info;
     if (!sgx_copy_to_enclave(&temp_topo_info, sizeof(temp_topo_info),
                              uptr_topo_info, sizeof(*uptr_topo_info))) {
-        log_error("Copying topo_info into the enclave failed");
         return -1;
     }
 
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
 
-    ret = copy_resource_range_to_enclave(&temp_topo_info.possible_logical_cores,
-                                         &topo_info->possible_logical_cores);
-    if (ret < 0) {
-        log_error("Copying possible_logical_cores failed");
+    size_t cores_cnt = temp_topo_info.cores_cnt;
+    if (!IS_IN_RANGE_INCL(cores_cnt, 1, 1 << 16))
         return -1;
-    }
-    ret = sanitize_hw_resource_range(&topo_info->possible_logical_cores, 1, 1 << 16, 0, 1 << 16);
-    if (ret < 0) {
-        log_error("Invalid possible_logical_cores received from the host");
-        return -1;
-    }
-
-    ret = copy_resource_range_to_enclave(&temp_topo_info.online_logical_cores,
-                                         &topo_info->online_logical_cores);
-    if (ret < 0) {
-        log_error("Copying online_logical_cores failed");
-        return -1;
-    }
-    ret = sanitize_hw_resource_range(&topo_info->online_logical_cores, 1, 1 << 16, 0, 1 << 16);
-    if (ret < 0) {
-        log_error("Invalid online_logical_cores received from the host");
-        return -1;
-    }
-
-    size_t online_logical_cores_cnt = topo_info->online_logical_cores.resource_cnt;
-    size_t possible_logical_cores_cnt = topo_info->possible_logical_cores.resource_cnt;
-    if (online_logical_cores_cnt > possible_logical_cores_cnt) {
-        log_error("Impossible configuration: more online cores (%zu) than possible cores (%zu)",
-                   online_logical_cores_cnt, possible_logical_cores_cnt);
-        return -1;
-    }
+    topo_info->cores_cnt = cores_cnt;
 
     topo_info->physical_cores_per_socket = temp_topo_info.physical_cores_per_socket;
     if (!IS_IN_RANGE_INCL(topo_info->physical_cores_per_socket, 1, 1 << 13)) {
-        log_error("Invalid physical_cores_per_socket: %zu received from the host",
-                   topo_info->physical_cores_per_socket);
         return -1;
     }
 
@@ -787,58 +692,51 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
     topo_info->sockets_cnt = temp_topo_info.sockets_cnt;
     /* Virtual environments such as QEMU may assign each core to a separate socket/package with
      * one or more NUMA nodes. So we check against the number of online logical cores. */
-    if (!IS_IN_RANGE_INCL(topo_info->sockets_cnt, 1, online_logical_cores_cnt)) {
-        log_error("Invalid sockets_cnt: %zu received from the host", topo_info->sockets_cnt);
+    if (!IS_IN_RANGE_INCL(topo_info->sockets_cnt, 1, cores_cnt)) {
         return -1;
     }
 
     topo_info->cache_indices_cnt = temp_topo_info.cache_indices_cnt;
     if (!IS_IN_RANGE_INCL(topo_info->cache_indices_cnt, 1, 1 << 4)) {
-        log_error("Invalid cache_indices_cnt: %zu received from the host",
-                   topo_info->cache_indices_cnt);
         return -1;
     }
 
-    /* Allocate enclave memory to store core topology info */
-    ret = sgx_copy_core_topo_to_enclave(temp_topo_info.core_topo_arr, online_logical_cores_cnt,
-                                        topo_info->cache_indices_cnt,
-                                        &topo_info->core_topo_arr);
+    ret = sgx_copy_core_topo_to_enclave(temp_topo_info.cores, cores_cnt,
+                                        topo_info->cache_indices_cnt, &topo_info->cores);
     if (ret < 0) {
-        log_error("Copying core_topo_arr into the enclave failed");
         return -1;
     }
 
-    ret = sanitize_core_topology_info(topo_info->core_topo_arr, online_logical_cores_cnt,
-                                      topo_info->cache_indices_cnt, topo_info->sockets_cnt);
+    ret = sanitize_core_topo_info(topo_info->cores, cores_cnt,
+                                  topo_info->cache_indices_cnt, topo_info->sockets_cnt);
     if (ret < 0) {
-        log_error("Sanitization of core_topology failed");
         return -1;
     }
 
-    ret = copy_resource_range_to_enclave(&temp_topo_info.online_nodes, &topo_info->online_nodes);
-    if (ret < 0) {
-        log_error("Copying online_nodes into the enclave failed");
+    size_t nodes_cnt = temp_topo_info.nodes_cnt;
+    if (!IS_IN_RANGE_INCL(nodes_cnt, 1, 1 << 8))
+        return -1;
+    topo_info->nodes_cnt = nodes_cnt;
+
+    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
+    if (!distances)
+        return -1;
+    if (!sgx_copy_to_enclave(distances,
+                             nodes_cnt * nodes_cnt * sizeof(*distances),
+                             temp_topo_info.numa_distance_matrix,
+                             nodes_cnt * nodes_cnt * sizeof(*distances))) {
         return -1;
     }
+    topo_info->numa_distance_matrix = distances;
 
-    ret = sanitize_hw_resource_range(&topo_info->online_nodes, 1, 1 << 16, 0, 1 << 16);
-    if (ret < 0) {
-        log_error("Invalid online_nodes received from the host");
-        return -1;
-    }
-
-    size_t online_nodes_cnt = topo_info->online_nodes.resource_cnt;
-    ret = sgx_copy_numa_topo_to_enclave(temp_topo_info.numa_topo_arr, online_nodes_cnt,
+    ret = sgx_copy_numa_topo_to_enclave(temp_topo_info.numa_topo_arr, nodes_cnt,
                                         &topo_info->numa_topo_arr);
     if (ret < 0) {
-        log_error("Copying numa_topo_arr into the enclave failed");
         return -1;
     }
 
-    ret = sanitize_numa_topology_info(topo_info->numa_topo_arr, online_nodes_cnt,
-                                      online_logical_cores_cnt, possible_logical_cores_cnt);
+    ret = sanitize_numa_topo_info(topo_info->numa_topo_arr, nodes_cnt, cores_cnt);
     if (ret < 0) {
-        log_error("Sanitization of numa_topo_arr failed");
         return -1;
     }
 
@@ -1020,7 +918,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    ret = copy_and_sanitize_topo_info(uptr_topo_info, enable_sysfs_topology);
+    ret = import_and_sanitize_topo_info(uptr_topo_info, enable_sysfs_topology);
     if (ret < 0) {
         log_error("Failed to copy and sanitize topology information");
         ocall_exit(1, /*is_exitgroup=*/true);

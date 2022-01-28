@@ -9,6 +9,8 @@
 
 #include <stdbool.h>
 
+#include "bitmap.h"
+
 /* Used to represent buffers having numeric values and unit suffixes if present, e.g. "1024576K".
  * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
 #define PAL_SYSFS_BUF_FILESZ 64
@@ -20,7 +22,9 @@
  * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
 #define PAL_SYSFS_PATH_SIZE 128
 
+/* Max SMT siblings currently supported on x86 processors */
 #define MAX_HYPERTHREADS_PER_CORE 4
+
 #define MAX_CACHE_LEVELS          3
 
 enum {
@@ -35,10 +39,9 @@ enum cache_type {
     CACHE_TYPE_UNIFIED,
 };
 
-/* `start` and `end` are inclusive */
 struct pal_range_info {
     size_t start;
-    size_t end;
+    size_t end; /* inclusive */
 };
 
 struct pal_res_range_info {
@@ -57,7 +60,7 @@ struct pal_res_range_info {
 };
 
 struct pal_core_cache_info {
-    struct pal_res_range_info shared_cpu_map;
+    struct bitmap shared_cpus; // excludes offline CPUs, includes itself
     size_t level;
     enum cache_type type;
     size_t size;
@@ -66,41 +69,47 @@ struct pal_core_cache_info {
     size_t physical_line_partition;
 };
 
-struct pal_core_topo_info {
-    bool is_logical_core_online;
-    size_t core_id;
+struct pal_core_info {
+    bool is_online;
+    /* Everything below is valid only if the core is online! */
+
     /* Socket (physical package) where the core is present */
-    size_t socket_id;
-    struct pal_res_range_info core_siblings;
-    struct pal_res_range_info thread_siblings;
-    /* Array of size cache_indices_cnt, owned by this struct */
+    size_t socket_id; /* "physical package id of cpuX. Typically corresponds to a physical socket number, but the actual value is architecture and platform dependent." */
+    struct pal_res_range_info core_siblings;   // excludes offline CPUs, includes itself
+    struct pal_res_range_info thread_siblings; // excludes offline CPUs, includes itself
+    /* Array with cache_indices_cnt elements, owned by this struct */
     struct pal_core_cache_info* cache_info_arr;
 };
 
-struct pal_numa_topo_info {
-    struct pal_res_range_info cpumap;
-    struct pal_res_range_info distance;
+// TODO: move info from struct pal_cpu_info to here
+struct pal_numa_node_info {
+    bool is_online;
+    /* Everything below is valid only if the node is online! */
+
+    struct pal_res_range_info cpumap; // excludes offline CPUs
+    struct bitmap cpu_map;
     size_t nr_hugepages[HUGEPAGES_MAX];
 };
 
 struct pal_topo_info {
-    struct pal_res_range_info possible_logical_cores;
+    /* Array of information about logical cores, owned by this struct. */
+    size_t cores_cnt;
+    struct pal_core_info* cores; // logical // TODO: embed "logical" in the var name?
 
-    struct pal_res_range_info online_logical_cores;
-    /* Array of logical core topology info, owned by this struct.
-     * Has online_logical_cores.resource_cnt elements. */
-    struct pal_core_topo_info* core_topo_arr;
+    /* Array with `nodes_cnt` elements, owned by this struct. */
+    size_t nodes_cnt;
+    struct pal_numa_node_info* numa_topo_arr;
 
-    struct pal_res_range_info online_nodes;
-    /* Array of numa topology info, owned by this struct. Has online_nodes.resource_cnt elements. */
-    struct pal_numa_topo_info* numa_topo_arr;
+    /* Has `nodes_cnt` x `nodes_cnt` elements.
+     * numa_distance_matrix[i*nodes_cnt + j] is NUMA distance from node i to node j. */
+    size_t* numa_distance_matrix; // inline inside nodes?
 
-    /* Number of physical packages in the system */
+    /* Number of physical packages in the system. */
     size_t sockets_cnt;
     /* Number of physical cores in a socket (physical package). */
     size_t physical_cores_per_socket;
 
-    /* Number of cache levels (such as L2 or L3) available on the host. */
+    /* Number of caches (such as L1i, L1d, L2, etc.) available. */
     size_t cache_indices_cnt;
 };
 

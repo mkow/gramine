@@ -127,13 +127,13 @@ fail:
 /* This function doesn't clean up resources on failure as we terminate the process anyway. */
 static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
                                           struct pal_res_range_info* dest) {
-    size_t range_arr_size;
-    if (__builtin_mul_overflow(src->ranges_cnt, sizeof(struct pal_range_info), &range_arr_size)) {
+    size_t ranges_arr_size;
+    if (__builtin_mul_overflow(src->ranges_cnt, sizeof(struct pal_range_info), &ranges_arr_size)) {
         log_error("Overflow detected with size of ranges_arr memory allocation request");
         return -1;
     }
 
-    struct pal_range_info* ranges_arr = malloc(range_arr_size);
+    struct pal_range_info* ranges_arr = malloc(ranges_arr_size);
     if (!ranges_arr) {
         log_error("Range allocation failed");
         return -1;
@@ -142,7 +142,7 @@ static int copy_resource_range_to_enclave(struct pal_res_range_info* src,
     /* Even though `src` points to a safe in-enclave object, the `src->ranges_arr` pointer is
      * untrusted and may maliciously point inside the enclave; thus need to use
      * `sgx_copy_to_enclave()` function */
-    if (!sgx_copy_to_enclave(ranges_arr, src->ranges_cnt * sizeof(*ranges_arr),
+    if (!sgx_copy_to_enclave(ranges_arr, ranges_arr_size,
                              src->ranges_arr, src->ranges_cnt * sizeof(*src->ranges_arr))) {
         log_error("Copying ranges into the enclave failed");
         return -1;
@@ -746,7 +746,6 @@ static int copy_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info,
     }
 
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
-    memset(topo_info, 0, sizeof(*topo_info));
 
     ret = copy_resource_range_to_enclave(&temp_topo_info.possible_logical_cores,
                                          &topo_info->possible_logical_cores);

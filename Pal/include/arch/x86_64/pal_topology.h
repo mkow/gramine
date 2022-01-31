@@ -20,7 +20,9 @@
  * NOTE: Used to allocate on stack; increase with caution or use malloc instead. */
 #define PAL_SYSFS_PATH_SIZE 128
 
+/* Max SMT siblings currently supported on x86 processors */
 #define MAX_HYPERTHREADS_PER_CORE 4
+
 #define MAX_CACHE_LEVELS          3
 
 enum {
@@ -35,10 +37,9 @@ enum cache_type {
     CACHE_TYPE_UNIFIED,
 };
 
-/* `start` and `end` are inclusive */
 struct pal_range_info {
     size_t start;
-    size_t end;
+    size_t end; /* inclusive */
 };
 
 struct pal_res_range_info {
@@ -79,7 +80,7 @@ struct pal_core_topo_info {
 
 struct pal_numa_topo_info {
     struct pal_res_range_info cpumap;
-    struct pal_res_range_info distance;
+    struct pal_res_range_info distances;
     size_t nr_hugepages[HUGEPAGES_MAX];
 };
 
@@ -100,7 +101,7 @@ struct pal_topo_info {
     /* Number of physical cores in a socket (physical package). */
     size_t physical_cores_per_socket;
 
-    /* Number of cache levels (such as L2 or L3) available on the host. */
+    /* Number of caches (such as L1i, L1d, L2, etc.) available. */
     size_t cache_indices_cnt;
 };
 

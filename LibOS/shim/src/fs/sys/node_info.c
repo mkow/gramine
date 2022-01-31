@@ -38,10 +38,10 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     const char* name = dent->name;
     struct pal_numa_topo_info* numa_topo = &g_pal_public_state->topo_info.numa_topo_arr[node_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
-    if (strcmp(name, "cpumap" ) == 0) {
+    if (strcmp(name, "cpumap") == 0) {
         ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topo->cpumap, str, sizeof(str));
     } else if (strcmp(name, "distance") == 0) {
-        ret = sys_convert_ranges_to_str(&numa_topo->distance, " ", str, sizeof(str));
+        ret = sys_convert_ranges_to_str(&numa_topo->distances, " ", str, sizeof(str));
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {

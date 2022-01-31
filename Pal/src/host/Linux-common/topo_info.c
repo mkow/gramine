@@ -401,7 +401,7 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
             goto out;
 
         snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
-        ret = get_hw_resource_range(filename, &numa_topo_arr[idx].distance);
+        ret = get_hw_resource_range(filename, &numa_topo_arr[idx].distances);
         if (ret < 0)
             goto out;
 

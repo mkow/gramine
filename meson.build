@@ -13,7 +13,7 @@ project(
     default_options: [
         'c_std=c11',
         'cpp_std=c++14',
-        'werror=true',
+        'werror=false',
     ],
 )
 

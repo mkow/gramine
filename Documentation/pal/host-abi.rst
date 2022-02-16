@@ -64,8 +64,6 @@ Basic types
 
 .. doxygentypedef:: PAL_NUM
    :project: pal
-.. doxygentypedef:: PAL_PTR
-   :project: pal
 .. doxygentypedef:: PAL_IDX
    :project: pal
 

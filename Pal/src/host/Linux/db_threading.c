@@ -28,7 +28,7 @@
  * is not a part of this mechanism (it only allocates a tiny altstack). */
 struct thread_stack_map_t {
     void* stack;
-    bool  used;
+    bool used;
 };
 
 static struct thread_stack_map_t* g_thread_stack_map = NULL;

@@ -11,4 +11,5 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
+__attribute__((unused)) // Should be used by exception handling logic
 static pal_event_handler_t g_handlers[PAL_EVENT_NUM_BOUND] = {0};

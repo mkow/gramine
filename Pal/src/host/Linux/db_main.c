@@ -120,8 +120,8 @@ void _DkGetAvailableUserAddressRange(void** out_start, void** out_end) {
         start_addr = (void*)((unsigned long)start_addr << 1);
     }
 
-    *end   = end_addr;
-    *start = start_addr;
+    *out_end   = end_addr;
+    *out_start = start_addr;
 }
 
 noreturn static void print_usage_and_exit(const char* argv_0) {

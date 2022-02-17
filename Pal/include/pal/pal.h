@@ -79,11 +79,6 @@ enum {
 
 #define PAL_IDX_POISON         ((PAL_IDX)-1) /* PAL identifier poison value */
 
-typedef struct PAL_PTR_RANGE_ {
-    void* start;
-    void* end;
-} PAL_PTR_RANGE;
-
 /********** PAL APIs **********/
 
 /* Part of PAL state which is shared between all PALs and accessible (read-only) by the binary
@@ -103,8 +98,9 @@ struct pal_public_state {
     /*
      * Memory layout
      */
-    bool disable_aslr;          /*!< disable ASLR (may be necessary for restricted environments) */
-    PAL_PTR_RANGE user_address; /*!< The range of user addresses */
+    bool disable_aslr;        /*!< disable ASLR (may be necessary for restricted environments) */
+    void* user_address_start; /*!< User address range start */
+    void* user_address_end;   /*!< User address range end */
 
     struct {
         uintptr_t start;

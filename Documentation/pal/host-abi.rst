@@ -67,13 +67,6 @@ Basic types
 .. doxygentypedef:: PAL_IDX
    :project: pal
 
-
-.. doxygentypedef:: PAL_PTR_RANGE
-   :project: pal
-.. doxygenstruct:: PAL_PTR_RANGE_
-   :project: pal
-   :members:
-
 PAL public state
 ^^^^^^^^^^^^^^^^
 

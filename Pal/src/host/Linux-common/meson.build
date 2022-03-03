@@ -1,5 +1,6 @@
 pal_linux_common_sources_enclave = files(
     'bogomips.c',
+    'file_utils.c',
     'gramine_unix_socket_addr.c',
 )
 pal_linux_common_sources_urts = files(

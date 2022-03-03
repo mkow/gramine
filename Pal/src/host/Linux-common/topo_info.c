@@ -334,9 +334,8 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
     if (ret < 0)
         return ret;
 
-    struct pal_core_topo_info* core_topo_arr =
-        malloc(online_logical_cores_cnt * sizeof(*core_topo_arr));
-    if (!core_topo_arr)
+    struct pal_cpu_info* core_info_arr = malloc(online_logical_cores_cnt * sizeof(*core_info_arr));
+    if (!core_info_arr)
         return -ENOMEM;
 
     size_t current_max_socket = 0;
@@ -356,57 +355,57 @@ static int get_core_topo_info(struct pal_topo_info* topo_info) {
             ret = get_hw_resource_value(filename, &is_logical_core_online);
             if (ret < 0)
                 goto out;
-            core_topo_arr[idx].is_logical_core_online = (bool)is_logical_core_online;
+            core_info_arr[idx].is_logical_core_online = (bool)is_logical_core_online;
         } else {
             /* cpu0 is always online and thus the "online" file is not present. */
-            core_topo_arr[idx].is_logical_core_online = true;
+            core_info_arr[idx].is_logical_core_online = true;
         }
 
         ret = snprintf(filename, sizeof(filename), "%s/topology/core_id", dirname);
         if (ret < 0)
             goto out;
-        ret = get_hw_resource_value(filename, &core_topo_arr[idx].core_id);
+        ret = get_hw_resource_value(filename, &core_info_arr[idx].core_id);
         if (ret < 0)
             goto out;
 
         ret = snprintf(filename, sizeof(filename), "%s/topology/core_siblings_list", dirname);
         if (ret < 0)
             goto out;
-        ret = get_hw_resource_range(filename, &core_topo_arr[idx].core_siblings);
+        ret = get_hw_resource_range(filename, &core_info_arr[idx].core_siblings);
         if (ret < 0)
             goto out;
 
         ret = snprintf(filename, sizeof(filename), "%s/topology/thread_siblings_list", dirname);
         if (ret < 0)
             goto out;
-        ret = get_hw_resource_range(filename, &core_topo_arr[idx].thread_siblings);
+        ret = get_hw_resource_range(filename, &core_info_arr[idx].thread_siblings);
         if (ret < 0)
             goto out;
 
         ret = snprintf(filename, sizeof(filename), "%s/topology/physical_package_id", dirname);
         if (ret < 0)
             goto out;
-        ret = get_hw_resource_value(filename, &core_topo_arr[idx].socket_id);
+        ret = get_hw_resource_value(filename, &core_info_arr[idx].socket_id);
         if (ret < 0)
             goto out;
 
-        if (core_topo_arr[idx].socket_id > current_max_socket)
-            current_max_socket = core_topo_arr[idx].socket_id;
+        if (core_info_arr[idx].socket_id > current_max_socket)
+            current_max_socket = core_info_arr[idx].socket_id;
 
         ret = get_cache_topo_info(topo_info->cache_indices_cnt, idx,
-                                  &core_topo_arr[idx].cache_info_arr);
+                                  &core_info_arr[idx].cache_info_arr);
         if (ret < 0)
             goto out;
     }
 
-    topo_info->core_topo_arr = core_topo_arr;
+    topo_info->core_info_arr = core_info_arr;
     topo_info->sockets_cnt = current_max_socket + 1;
-    topo_info->physical_cores_per_socket = core_topo_arr[0].core_siblings.resource_cnt /
-                                           core_topo_arr[0].thread_siblings.resource_cnt;
+    topo_info->physical_cores_per_socket = core_info_arr[0].core_siblings.resource_cnt /
+                                           core_info_arr[0].thread_siblings.resource_cnt;
     return 0;
 
 out:
-    free(core_topo_arr);
+    free(core_info_arr);
     return ret;
 }
 

@@ -66,7 +66,7 @@ struct pal_core_cache_info {
     size_t physical_line_partition;
 };
 
-struct pal_core_topo_info {
+struct pal_cpu_info {
     bool is_logical_core_online;
     size_t core_id;
     /* Socket (physical package) where the core is present */
@@ -75,6 +75,14 @@ struct pal_core_topo_info {
     struct pal_res_range_info thread_siblings;
     /* Array of size cache_indices_cnt, owned by this struct */
     struct pal_core_cache_info* cache_info_arr;
+
+    const char* cpu_vendor;
+    const char* cpu_brand;
+    PAL_NUM cpu_family;
+    PAL_NUM cpu_model;
+    PAL_NUM cpu_stepping;
+    double cpu_bogomips;
+    const char* cpu_flags;
 };
 
 struct pal_numa_topo_info {
@@ -89,7 +97,7 @@ struct pal_topo_info {
     struct pal_res_range_info online_logical_cores;
     /* Array of logical core topology info, owned by this struct.
      * Has online_logical_cores.resource_cnt elements. */
-    struct pal_core_topo_info* core_topo_arr;
+    struct pal_cpu_info* core_topo_arr;
 
     struct pal_res_range_info online_nodes;
     /* Array of numa topology info, owned by this struct. Has online_nodes.resource_cnt elements. */

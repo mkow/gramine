@@ -42,23 +42,21 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    struct pal_core_topo_info* core_topology =
-        &g_pal_public_state->topo_info.core_topo_arr[cpu_num];
+    struct pal_cpu_info* core_info = &g_pal_public_state->topo_info.core_topo_arr[cpu_num];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "online") == 0) {
         /* `cpu/cpuX/online` is not present for cpu0 */
         if (cpu_num == 0)
             return -ENOENT;
-        ret = snprintf(str, sizeof(str), "%d\n", core_topology->is_logical_core_online);
+        ret = snprintf(str, sizeof(str), "%d\n", core_info->is_logical_core_online);
     } else if (strcmp(name, "core_id") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->core_id);
+        ret = snprintf(str, sizeof(str), "%zu\n", core_info->core_id);
     } else if (strcmp(name, "physical_package_id") == 0) {
-        ret = snprintf(str, sizeof(str), "%zu\n", core_topology->socket_id);
+        ret = snprintf(str, sizeof(str), "%zu\n", core_info->socket_id);
     } else if (strcmp(name, "core_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_topology->core_siblings, str, sizeof(str));
+        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->core_siblings, str, sizeof(str));
     } else if (strcmp(name, "thread_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_topology->thread_siblings, str,
-                                                   sizeof(str));
+        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->thread_siblings, str, sizeof(str));
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;

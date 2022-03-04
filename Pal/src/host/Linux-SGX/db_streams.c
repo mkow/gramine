@@ -237,7 +237,8 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     return 0;
 }
 
-/* If `target_process` has an SSL context (i.e., its stream is encrypted), then `cargo` is sent encrypted. */
+/* If `target_process` has an SSL context (i.e., its stream is encrypted), then `cargo` is sent
+ * encrypted. */
 int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (HANDLE_HDR(target_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;

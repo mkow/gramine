@@ -153,22 +153,24 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
 /*!
  * \brief Allocate virtual memory for the library OS and zero it out.
  *
- * \param[in,out] addr_ptr    `*addr_ptr` can be any valid address aligned at the allocation
- *                            alignment or `NULL`, in which case a suitable address will be picked
- *                            automatically. Any memory previously allocated at the same address
- *                            will be discarded (only if `*addr_ptr` was provided). Overwriting any
- *                            part of PAL memory is forbidden. On successful return `*addr_ptr` will
- *                            contain the allocated address (which can differ only in the `NULL`
- *                            case).
+ * \param[in,out] addr_ptr    `*addr_ptr` should contain requested address, or NULL. On success,
+ *                            it will be set to the allocated address.
  * \param         size        Must be a positive number, aligned at the allocation alignment.
  * \param         alloc_type  A combination of any of the `PAL_ALLOC_*` flags.
  * \param         prot        A combination of the `PAL_PROT_*` flags.
+ *
+ * `*addr_ptr` can be any valid address aligned at the allocation alignment or `NULL`, in which case
+ * a suitable address will be picked automatically. Any memory previously allocated at the same
+ * address will be discarded (only if `*addr_ptr` was provided). Overwriting any part of PAL memory
+ * is forbidden. On successful return `*addr_ptr` will contain the allocated address (which can
+ * differ only in the `NULL` case).
+ *
  */
 int DkVirtualMemoryAlloc(void** addr_ptr, PAL_NUM size, pal_alloc_flags_t alloc_type,
                          pal_prot_flags_t prot);
 
 /*!
- * \brief This API deallocates a previously allocated memory mapping.
+ * \brief Deallocate a previously allocated memory mapping.
  *
  * \param addr  The address.
  * \param size  The size.
@@ -287,7 +289,7 @@ int DkStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t shar
                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
 
 /*!
- * \brief Blocks until a new connection is accepted and returns the PAL handle for the connection.
+ * \brief Block until a new connection is accepted and return the PAL handle for the connection.
  *
  * \param      handle   Handle to accept a new connection on.
  * \param[out] client   On success holds handle for the new connection.
@@ -304,11 +306,10 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opti
  * \param         handle  Handle to the stream.
  * \param         offset  Offset to read at. If \p handle is a file, \p offset must be specified at
  *                        each call.
- * \param[in,out] count   Size of \p buffer. On success the number of bytes read will be written to
- *                        it.
+ * \param[in,out] count   Size of \p buffer. On success, will be set to the number of bytes read.
  * \param         buffer  Pointer to the buffer to read into.
- * \param[out]    source  If \p handle is a UDP socket, \p size is not zero and \p source is not NULL,
- *                        the remote socket address is returned in it.
+ * \param[out]    source  If \p handle is a UDP socket, \p size is not zero and \p source is not
+ *                        NULL, the remote socket address is returned in it.
  * \param         size    Size of the \p source buffer.
  *
  * \returns 0 on success, negative error code on failure.
@@ -325,8 +326,7 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer
  * \param         handle  Handle to the stream.
  * \param         offset  Offset to write to. If \p handle is a file, \p offset must be specified at
  *                        each call.
- * \param[in,out] count   Size of \p buffer. On success the number of bytes written will be written
- *                        to it.
+ * \param[in,out] count   Size of \p buffer. On success, will be set the number of bytes written.
  * \param         buffer  Pointer to the buffer to write from.
  * \param         dest    If the handle is a UDP socket, specifies the remote socket address.
  *
@@ -365,7 +365,7 @@ int DkStreamMap(PAL_HANDLE handle, void** addr_ptr, pal_prot_flags_t prot, PAL_N
 /*!
  * \brief Unmap virtual memory that is backed by a file stream.
  *
- * `addr` and `size` must be aligned at the allocation alignment
+ * `addr` and `size` must be aligned at the allocation alignment.
  *
  * \returns 0 on success, negative error code on failure.
  */
@@ -388,20 +388,20 @@ int DkStreamFlush(PAL_HANDLE handle);
 /*!
  * \brief Send a PAL handle over another handle.
  *
- * Currently, the handle that is used to send cargo must be a process handle.
- *
  * \param cargo  The handle being sent.
  *
  * \returns 0 on success, negative error code on failure.
+ *
+ * Currently, the handle that is used to send cargo must be a process handle.
  */
 int DkSendHandle(PAL_HANDLE handle, PAL_HANDLE cargo);
 
 /*!
  * \brief This API receives a handle over another handle.
  *
- * TODO: document usage and parameters.
- *
  * \returns 0 on success, negative error code on failure.
+ *
+ * TODO: document usage and parameters.
  */
 int DkReceiveHandle(PAL_HANDLE handle, PAL_HANDLE* cargo);
 
@@ -487,31 +487,31 @@ noreturn void DkThreadExit(int* clear_child_tid);
 int DkThreadResume(PAL_HANDLE thread);
 
 /*!
- * \brief Sets the CPU affinity of a thread.
- *
- * All bit positions exceeding the count of host CPUs are ignored. Returns an error if no CPUs were
- * selected.
+ * \brief Set the CPU affinity of a thread.
  *
  * \param thread        PAL thread for which to set the CPU affinity.
  * \param cpumask_size  Size in bytes of the bitmask pointed by \a cpu_mask.
  * \param cpu_mask      Pointer to the new CPU mask.
  *
  * \returns 0 on success, negative error code on failure.
+ *
+ * All bit positions exceeding the count of host CPUs are ignored. Returns an error if no CPUs were
+ * selected.
  */
 int DkThreadSetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
 /*!
- * \brief Gets the CPU affinity of a thread.
- *
- * This function assumes that \a cpumask_size is valid and greater than 0. Also, \a cpumask_size
- * must be able to fit all the processors in the host and must be aligned by sizeof(long). For
- * example, if the host supports 4 CPUs, \a cpumask_size should be 8 bytes.
+ * \brief Get the CPU affinity of a thread.
  *
  * \param thread        PAL thread for which to get the CPU affinity.
  * \param cpumask_size  Size in bytes of the bitmask pointed by \a cpu_mask.
  * \param cpu_mask      Pointer to hold the current CPU mask.
  *
  * \returns 0 on success, negative error code on failure.
+ *
+ * This function assumes that \a cpumask_size is valid and greater than 0. Also, \a cpumask_size
+ * must be able to fit all the processors in the host and must be aligned by sizeof(long). For
+ * example, if the host supports 4 CPUs, \a cpumask_size should be 8 bytes.
  */
 int DkThreadGetCpuAffinity(PAL_HANDLE thread, PAL_NUM cpumask_size, unsigned long* cpu_mask);
 
@@ -663,7 +663,7 @@ int DkSystemTimeQuery(PAL_NUM* time);
  *
  * \param[out] buffer  Output buffer.
  * \param[in]  size    \p buffer size.
- * 
+ *
  * \returns 0 on success, negative on failure.
  */
 int DkRandomBitsRead(void* buffer, PAL_NUM size);
@@ -701,15 +701,6 @@ PAL_NUM DkMemoryAvailableQuota(void);
 /*!
  * \brief Obtain the attestation report (local) with `user_report_data` embedded into it.
  *
- * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B,
- * `target_info` is an SGX target_info struct of exactly 512B, and `report` is an SGX report
- * obtained via the EREPORT instruction (exactly 432B). If `target_info` contains all zeros,
- * then this function additionally returns this enclave's target info in `target_info`. Useful
- * for local attestation.
- *
- * The caller may specify `*user_report_data_size`, `*target_info_size`, and `*report_size` as 0
- * and other fields as NULL to get PAL-enforced sizes of these three structs.
- *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
  *                                       identifies this Gramine instance). Must be a 64B buffer
  *                                       in case of SGX PAL.
@@ -727,6 +718,15 @@ PAL_NUM DkMemoryAvailableQuota(void);
  *                                       be a 432B buffer in case of SGX PAL.
  * \param[in,out] report_size            Caller specifies size of `report`; on return, contains
  *                                       PAL-enforced size of `report` (432B in case of SGX PAL).
+ *
+ * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B,
+ * `target_info` is an SGX target_info struct of exactly 512B, and `report` is an SGX report
+ * obtained via the EREPORT instruction (exactly 432B). If `target_info` contains all zeros,
+ * then this function additionally returns this enclave's target info in `target_info`. Useful
+ * for local attestation.
+ *
+ * The caller may specify `*user_report_data_size`, `*target_info_size`, and `*report_size` as 0
+ * and other fields as NULL to get PAL-enforced sizes of these three structs.
  */
 int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_size,
                         void* target_info, PAL_NUM* target_info_size, void* report,
@@ -734,9 +734,6 @@ int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_
 
 /*!
  * \brief Obtain the attestation quote with `user_report_data` embedded into it.
- *
- * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B
- * and `quote` is an SGX quote obtained from Quoting Enclave via AESM service.
  *
  * \param[in]     user_report_data       Report data with arbitrary contents (typically uniquely
  *                                       identifies this Gramine instance). Must be a 64B buffer
@@ -746,6 +743,9 @@ int DkAttestationReport(const void* user_report_data, PAL_NUM* user_report_data_
  * \param[out]    quote                  Attestation quote with `user_report_data` embedded.
  * \param[in,out] quote_size             Caller specifies maximum size allocated for `quote`; on
  *                                       return, contains actual size of obtained quote.
+ *
+ * Currently works only for Linux-SGX PAL, where `user_report_data` is a blob of exactly 64B
+ * and `quote` is an SGX quote obtained from Quoting Enclave via AESM service.
  */
 int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_size, void* quote,
                        PAL_NUM* quote_size);
@@ -753,11 +753,11 @@ int DkAttestationQuote(const void* user_report_data, PAL_NUM user_report_data_si
 /*!
  * \brief Set wrap key (master key) for protected files.
  *
- * Currently works only for Linux-SGX PAL. This function is supposed to be called during
- * remote attestation and secret provisioning, before the user application starts.
- *
  * \param[in] pf_key_hex  Wrap key for protected files. Must be a 32-char null-terminated hex string
  *                        in case of SGX PAL (AES-GCM encryption key).
+ *
+ * Currently works only for Linux-SGX PAL. This function is supposed to be called during
+ * remote attestation and secret provisioning, before the user application starts.
  */
 int DkSetProtectedFilesKey(const char* pf_key_hex);
 

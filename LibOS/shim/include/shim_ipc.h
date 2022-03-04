@@ -57,11 +57,12 @@ int init_ipc(void);
 int init_ipc_ids(void);
 
 /*!
- * \brief Initialize the IPC worker thread
+ * \brief Initialize the IPC worker thread.
  */
 int init_ipc_worker(void);
+
 /*!
- * \brief Terminate the IPC worker thread
+ * \brief Terminate the IPC worker thread.
  */
 void terminate_ipc_worker(void);
 
@@ -71,6 +72,7 @@ void terminate_ipc_worker(void);
  * \param dest  VMID of the destination process to connect to.
  */
 int connect_to_process(IDTYPE dest);
+
 /*!
  * \brief Remove an outgoing IPC connection.
  *
@@ -106,6 +108,7 @@ void init_ipc_response(struct shim_ipc_msg* msg, uint64_t seq, size_t size);
  * \param msg   Message to send.
  */
 int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
+
 /*!
  * \brief Send an IPC message and wait for a response.
  *
@@ -120,6 +123,7 @@ int ipc_send_message(IDTYPE dest, struct shim_ipc_msg* msg);
  * discarded, but still awaited for.
  */
 int ipc_send_msg_and_get_response(IDTYPE dest, struct shim_ipc_msg* msg, void** resp);
+
 /*!
  * \brief Broadcast an IPC message.
  *

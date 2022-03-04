@@ -296,7 +296,8 @@ struct shim_thread* get_new_internal_thread(void);
  *
  * \param thread  Thread for which to allocate a new stack.
  *
- * On success returns `0`, on failure - negative error code.
+ * \returns `0` on success and negative error code on failure.
+ *
  * Should be called only once per thread.
  */
 int alloc_thread_libos_stack(struct shim_thread* thread);

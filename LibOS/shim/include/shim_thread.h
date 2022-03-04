@@ -149,7 +149,7 @@ static inline bool is_internal(struct shim_thread* thread) {
 }
 
 /*!
- * \brief Allocates new ID.
+ * \brief Allocate a new ID.
  *
  * \param move_ownership_to  VMID of the process to pass ownership of ID to; if set, ID is removed
  *                           from owned and locally tracked IDs.
@@ -160,8 +160,9 @@ static inline bool is_internal(struct shim_thread* thread) {
  * no longer locally tracked and the current process no longer owns it.
  */
 IDTYPE get_new_id(IDTYPE move_ownership_to);
+
 /*!
- * \brief Releases (frees) previously allocated ID.
+ * \brief Release (free) a previously allocated ID.
  *
  * \param id  ID to release.
  */
@@ -271,11 +272,11 @@ static inline void wake_queue(struct wake_queue_head* queue) {
 }
 
 /*!
- * \brief Look up the thread for a given id.
+ * \brief Look up the thread for a given ID.
  *
- * \param tid  Thread id to look for.
+ * \param tid  Thread ID to look for.
  *
- * Searches global threads list for a thread with id equal to \p tid.
+ * Searches global threads list for a thread with ID equal to \p tid.
  * If no thread was found returns NULL.
  * Increases refcount of the returned thread.
  */

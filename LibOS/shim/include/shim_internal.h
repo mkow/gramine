@@ -44,6 +44,7 @@ void shim_log(int level, const char* fmt, ...) __attribute__((format(printf, 2, 
  * Emulates the syscall given the entry \p context.
  */
 noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
+
 /*!
  * \brief Restore the CPU context.
  *
@@ -59,8 +60,10 @@ noreturn void shim_emulate_syscall(PAL_CONTEXT* context);
  * simplicity.
  */
 noreturn void return_from_syscall(PAL_CONTEXT* context);
+
 /* Platform-specific part of return_from_syscall (called after ASan unpoisoning). */
 noreturn void _return_from_syscall(PAL_CONTEXT* context);
+
 /*!
  * \brief Restore the context after clone/fork.
  *
@@ -69,8 +72,9 @@ noreturn void _return_from_syscall(PAL_CONTEXT* context);
  * Restores LibOS \p context after a successful clone or fork.
  */
 noreturn void restore_child_context_after_clone(struct shim_context* context);
+
 /*!
- * \brief Creates a signal frame.
+ * \brief Create a signal frame.
  *
  * \param context              CPU context.
  * \param siginfo              Signal to be delivered.
@@ -87,6 +91,7 @@ noreturn void restore_child_context_after_clone(struct shim_context* context);
  */
 void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, void* restorer,
                       bool should_use_altstack, __sigset_t* old_mask);
+
 /*!
  * \brief Restart a syscall.
  *
@@ -96,8 +101,9 @@ void prepare_sigframe(PAL_CONTEXT* context, siginfo_t* siginfo, void* handler, v
  * Arranges \p context so that upon return to it redoes the \p syscall_nr syscall.
  */
 void restart_syscall(PAL_CONTEXT* context, uint64_t syscall_nr);
+
 /*!
- * \brief Restores a sigreturn context
+ * \brief Restore a sigreturn context.
  *
  * \param       Context original CPU context.
  * \param[out]  New_mask new signal mask.
@@ -108,6 +114,7 @@ void restart_syscall(PAL_CONTEXT* context, uint64_t syscall_nr);
  * \p new_mask.
  */
 void restore_sigreturn_context(PAL_CONTEXT* context, __sigset_t* new_mask);
+
 /*!
  * \brief Emulate a syscall.
  *
@@ -121,6 +128,7 @@ void restore_sigreturn_context(PAL_CONTEXT* context, __sigset_t* new_mask);
  * Used e.g. in Linux-SGX Pal to handle `syscall` instruction.
  */
 bool maybe_emulate_syscall(PAL_CONTEXT* context);
+
 /*!
  * \brief Handle a signal.
  *
@@ -237,6 +245,7 @@ struct shim_handle;
  * which case their PAL handle changed from NULL to a newly created handle).
  */
 void interrupt_epolls(struct shim_handle* handle);
+
 /*!
  * \brief Delete all epoll items associated with the pair \p fd and \p handle
  *
@@ -247,6 +256,7 @@ void interrupt_epolls(struct shim_handle* handle);
  * \p handle, i.e. after \p fd was detached from fds map.
  */
 void delete_epoll_items_for_fd(int fd, struct shim_handle* handle);
+
 /*!
  * \brief Check if next `epoll_wait` with `EPOLLET` should trigger for this handle.
  *

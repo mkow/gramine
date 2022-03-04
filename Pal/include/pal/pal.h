@@ -695,7 +695,6 @@ int DkSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
 
 /*!
  * \brief Return the amount of currently available memory for LibOS/application usage.
- *
  */
 PAL_NUM DkMemoryAvailableQuota(void);
 

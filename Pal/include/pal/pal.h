@@ -388,15 +388,14 @@ int DkStreamSetLength(PAL_HANDLE handle, PAL_NUM length);
 int DkStreamFlush(PAL_HANDLE handle);
 
 /*!
- * \brief Send a PAL handle over another handle.
+ * \brief Send a PAL handle to a process.
  *
- * \param cargo  The handle being sent.
+ * \param handle  The handle to the target process where \p cargo will be sent.
+ * \param cargo   The handle to send.
  *
  * \returns 0 on success, negative error code on failure.
- *
- * Currently, the handle that is used to send cargo must be a process handle.
  */
-int DkSendHandle(PAL_HANDLE handle, PAL_HANDLE cargo);
+int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 
 /*!
  * \brief This API receives a handle over another handle.

@@ -153,7 +153,7 @@ typedef uint32_t pal_prot_flags_t; /* bitfield */
 /*!
  * \brief Allocate virtual memory for the library OS and zero it out.
  *
- * \param[in,out] addr_ptr    `*addr_ptr` should contain requested address, or NULL. On success,
+ * \param[in,out] addr_ptr    `*addr_ptr` should contain requested address or NULL. On success,
  *                            it will be set to the allocated address.
  * \param         size        Must be a positive number, aligned at the allocation alignment.
  * \param         alloc_type  A combination of any of the `PAL_ALLOC_*` flags.
@@ -306,7 +306,8 @@ int DkStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opti
  * \param         handle  Handle to the stream.
  * \param         offset  Offset to read at. If \p handle is a file, \p offset must be specified at
  *                        each call.
- * \param[in,out] count   Size of \p buffer. On success, will be set to the number of bytes read.
+ * \param[in,out] count   Contains size of \p buffer. On success, will be set to the number of bytes
+ *                        read.
  * \param         buffer  Pointer to the buffer to read into.
  * \param[out]    source  If \p handle is a UDP socket, \p size is not zero and \p source is not
  *                        NULL, the remote socket address is returned in it.
@@ -326,7 +327,8 @@ int DkStreamRead(PAL_HANDLE handle, PAL_NUM offset, PAL_NUM* count, void* buffer
  * \param         handle  Handle to the stream.
  * \param         offset  Offset to write to. If \p handle is a file, \p offset must be specified at
  *                        each call.
- * \param[in,out] count   Size of \p buffer. On success, will be set the number of bytes written.
+ * \param[in,out] count   Contains size of \p buffer. On success, will be set to the number of bytes
+ *                        written.
  * \param         buffer  Pointer to the buffer to write from.
  * \param         dest    If the handle is a UDP socket, specifies the remote socket address.
  *

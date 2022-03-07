@@ -390,21 +390,23 @@ int DkStreamFlush(PAL_HANDLE handle);
 /*!
  * \brief Send a PAL handle to a process.
  *
- * \param handle  The handle to the target process where \p cargo will be sent.
- * \param cargo   The handle to send.
+ * \param target_process  The handle to the target process where \p cargo will be sent.
+ * \param cargo           The handle to send.
  *
  * \returns 0 on success, negative error code on failure.
  */
 int DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 
 /*!
- * \brief This API receives a handle over another handle.
+ * \brief Receive a handle from another process.
+ *
+ * \param      source_process  The handle to the source process from which \p cargo will be
+ *                             received.
+ * \param[out] out_cargo       The received handle.
  *
  * \returns 0 on success, negative error code on failure.
- *
- * TODO: document usage and parameters.
  */
-int DkReceiveHandle(PAL_HANDLE handle, PAL_HANDLE* cargo);
+int DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 /* stream attribute structure */
 typedef struct _PAL_STREAM_ATTR {

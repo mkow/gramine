@@ -182,7 +182,7 @@ int _DkStreamFlush(PAL_HANDLE handle);
 int _DkStreamGetName(PAL_HANDLE handle, char* buf, size_t size);
 const char* _DkStreamRealpath(PAL_HANDLE hdl);
 int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
-int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo);
+int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 /* DkProcess and DkThread calls */
 int _DkThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);

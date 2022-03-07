@@ -18,7 +18,7 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
+int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

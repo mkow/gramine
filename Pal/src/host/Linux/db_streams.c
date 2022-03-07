@@ -255,20 +255,13 @@ int _DkSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-/*!
- * \brief Receive `cargo` handle from a process identified via `hdl` handle.
- *
- * \param[in] hdl    Process stream on which to receive `cargo`.
- * \param[in] cargo  Arbitrary handle to receive on `hdl` and deserialize.
- * \return           0 on success, negative PAL error code otherwise.
- */
-int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
-    if (HANDLE_HDR(hdl)->type != PAL_TYPE_PROCESS)
+int _DkReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
+    if (HANDLE_HDR(source_process)->type != PAL_TYPE_PROCESS)
         return -PAL_ERROR_BADHANDLE;
 
     ssize_t ret;
     struct hdl_header hdl_hdr;
-    int fd = hdl->process.stream;
+    int fd = source_process->process.stream;
 
     /* first receive hdl_hdr so that we know how many FDs were transferred + how large is cargo */
     struct msghdr message_hdr = {0};
@@ -326,7 +319,7 @@ int _DkReceiveHandle(PAL_HANDLE hdl, PAL_HANDLE* cargo) {
         handle->flags &= ~(PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE);
     }
 
-    *cargo = handle;
+    *out_cargo = handle;
     return 0;
 }
 

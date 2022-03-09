@@ -45,6 +45,11 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
     return sys_load(str, out_data, out_size);
 }
 
+static bool bitmap_get_callback(size_t pos, const void* _bitmap) {
+    const struct bitmap* bitmap = (const struct bitmap*)_bitmap;
+    return bitmap_get(bitmap, pos);
+}
+
 int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
     unsigned int node_ind;
@@ -57,7 +62,8 @@ int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     const struct pal_numa_node_info* numa_topo = &topo_info->numa_topo_arr[node_ind];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "cpumap") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&numa_topo->cpumap, str, sizeof(str));
+        ret = sys_print_as_bitmask(str, sizeof(str), bitmap_get_end(&numa_topo->cpu_map),
+                                   bitmap_get_callback, &numa_topo->cpu_map);
     } else if (strcmp(name, "distance") == 0) {
         size_t* distances = topo_info->numa_distance_matrix + node_ind * topo_info->nodes_cnt;
         size_t str_pos = 0;

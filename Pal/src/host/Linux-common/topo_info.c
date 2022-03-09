@@ -511,7 +511,7 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
         ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpulist", idx);
         if (ret < 0)
             goto out;
-        ret = get_hw_resource_range(filename, &numa_topo_arr[idx].cpumap);
+        ret = iterate_set_from_file(filename, set_bit_in_bitmap, &numa_topo_arr[idx].cpu_map);
         if (ret < 0)
             goto out;
 

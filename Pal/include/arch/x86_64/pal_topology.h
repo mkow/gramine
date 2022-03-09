@@ -86,7 +86,7 @@ struct pal_numa_node_info {
     bool is_online;
     /* Everything below is valid only if the node is online! */
 
-    struct pal_res_range_info cpumap; // excludes offline CPUs
+    // struct pal_res_range_info cpumap; // excludes offline CPUs
     struct bitmap cpu_map;
     size_t nr_hugepages[HUGEPAGES_MAX];
 };

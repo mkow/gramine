@@ -230,7 +230,7 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_info* uptr_src,
             ret = copy_bitmap_to_enclave(&temp_cache_info_arr[i].shared_cpus,
                                          &cache_info_arr[i].shared_cpus);
             if (ret < 0) {
-                return -1;
+                return ret;
             }
         }
 
@@ -272,10 +272,9 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_node_info* uptr_src,
         numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M];
         numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G];
 
-        int ret = copy_resource_range_to_enclave(&temp_numa_topo_arr[i].cpumap,
-                                                 &numa_topo_arr[i].cpumap);
+        ret = copy_bitmap_to_enclave(&temp_numa_topo_arr[i].cpumap, &numa_topo_arr[i].cpumap);
         if (ret < 0) {
-            return -1;
+            return ret;
         }
     }
 

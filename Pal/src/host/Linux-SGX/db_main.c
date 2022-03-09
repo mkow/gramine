@@ -272,7 +272,7 @@ static int sgx_copy_numa_topo_to_enclave(struct pal_numa_node_info* uptr_src,
         numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_2M];
         numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G] = temp_numa_topo_arr[i].nr_hugepages[HUGEPAGES_1G];
 
-        ret = copy_bitmap_to_enclave(&temp_numa_topo_arr[i].cpumap, &numa_topo_arr[i].cpumap);
+        int ret = copy_bitmap_to_enclave(&temp_numa_topo_arr[i].cpu_map, &numa_topo_arr[i].cpu_map);
         if (ret < 0) {
             return ret;
         }

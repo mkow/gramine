@@ -116,17 +116,18 @@ fail:
     return NULL;
 }
 
-static int copy_bitmap_to_enclave(struct bitmap* uptr_src, struct bitmap* dst) {
-    if (!sgx_copy_to_enclave(dst, sizeof(*dst), uptr_src, sizeof(*uptr_src)))
-        return -1;
+static int copy_bitmap_to_enclave(struct bitmap* shallow_src, struct bitmap* dst) {
+    // if (!sgx_copy_to_enclave(dst, sizeof(*dst), uptr_src, sizeof(*uptr_src)))
+    //     return -1;
     size_t size;
-    if (__builtin_mul_overflow(dst->buckets_cnt, sizeof(*dst->buckets), &size))
+    if (__builtin_mul_overflow(shallow_src->buckets_cnt, sizeof(*dst->buckets), &size))
         return -1;
     void* buf = malloc(size);
     if (!buf)
         return -1;
-    if (!sgx_copy_to_enclave(buf, size, dst->buckets, size))
+    if (!sgx_copy_to_enclave(buf, size, shallow_src->buckets, size))
         return -1;
+    dst->buckets_cnt = shallow_src->buckets_cnt;
     dst->buckets = buf;
     return 0;
 }

@@ -207,9 +207,8 @@ static int sgx_copy_core_topo_to_enclave(struct pal_core_info* uptr_src,
 
         if (!sgx_copy_to_enclave(temp_cache_info_arr,
                                  cache_indices_cnt * sizeof(*temp_cache_info_arr),
-                                 temp_cores_arr->cache_info_arr,
-                                 cache_indices_cnt *
-                                 sizeof(*temp_cores_arr->cache_info_arr))) {
+                                 temp_cores_arr[idx]->cache_info_arr,
+                                 cache_indices_cnt * sizeof(*temp_cores_arr->cache_info_arr))) {
             return -1;
         }
 

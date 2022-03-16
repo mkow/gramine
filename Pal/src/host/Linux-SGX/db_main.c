@@ -73,13 +73,9 @@ static const char** make_argv_list(void* uptr_src, size_t src_size) {
         return argv;
     }
 
-    char* data = malloc(src_size);
+    char* data = sgx_import_to_enclave(uptr_src, src_size);
     if (!data) {
         return NULL;
-    }
-
-    if (!sgx_copy_to_enclave(data, src_size, uptr_src, src_size)) {
-        goto fail;
     }
     data[src_size - 1] = '\0';
 

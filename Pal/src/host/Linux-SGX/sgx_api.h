@@ -19,6 +19,8 @@ void sgx_reset_ustack(const void* old_ustack);
 
 bool sgx_copy_ptr_to_enclave(void** ptr, void* uptr, size_t size);
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize);
+void* sgx_import_to_enclave(const void* uptr, size_t usize);
+void* sgx_import_array_to_enclave(const void* uptr, size_t elem_size, size_t elem_cnt);
 
 /*!
  * \brief Low-level wrapper around EREPORT instruction leaf.

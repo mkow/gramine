@@ -62,7 +62,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
         return ret;
 
     const char* name = dent->name;
-    struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
     struct pal_cpu_thread_info* thread_info = &topo_info->threads[thread_num];
     struct pal_cpu_core_info*   core_info   = &topo_info->cores[thread_info->core_id];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};

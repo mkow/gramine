@@ -21,6 +21,8 @@
 // }
 
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(out_data);
+    __UNUSED(out_size);
     int ret;
 
     unsigned int cache_num;

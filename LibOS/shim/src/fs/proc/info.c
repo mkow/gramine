@@ -199,7 +199,7 @@ int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     ADD_INFO("cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", user, nice, system, idle, iowait,
              irq, softirq, steal, guest, guest_nice);
     for (size_t i = 0; i < g_pal_public_state->topo_info.threads_cnt; i++) {
-        if (!g_pal_public_state->topo_info.thread[i].is_online)
+        if (!g_pal_public_state->topo_info.threads[i].is_online)
             continue;
         ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", i, user, nice, system, idle,
                  iowait, irq, softirq, steal, guest, guest_nice);

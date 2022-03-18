@@ -14,7 +14,7 @@
 
 static bool is_online(size_t ind, const void* _topo_info) {
     struct pal_topo_info* topo_info = (struct pal_topo_info*)_topo_info;
-    return topo_info->cores[ind].is_online;
+    return topo_info->threads[ind].is_online;
 }
 
 static bool return_true(size_t ind, const void* arg) {
@@ -30,9 +30,9 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
     char str[PAL_SYSFS_BUF_FILESZ];
 
     if (strcmp(name, "online") == 0) {
-        ret = sys_print_as_ranges(str, sizeof(str), topo_info->cores_cnt, is_online, topo_info);
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->threads_cnt, is_online, topo_info);
     } else if (strcmp(name, "possible") == 0) {
-        ret = sys_print_as_ranges(str, sizeof(str), topo_info->cores_cnt, return_true, NULL);
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->threads_cnt, return_true, NULL);
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;
@@ -72,7 +72,7 @@ int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
             return -ENOENT;
         ret = snprintf(str, sizeof(str), "%d\n", (int)thread_info->is_online);
     } else if (strcmp(name, "core_id") == 0) {
-        ret = snprintf(str, sizeof(str), "%u\n", thread_info->core_id);
+        ret = snprintf(str, sizeof(str), "%zu\n", thread_info->core_id);
     } else if (strcmp(name, "physical_package_id") == 0) {
         ret = snprintf(str, sizeof(str), "%zu\n", core_info->socket_id);
     } else if (strcmp(name, "thread_siblings") == 0) {

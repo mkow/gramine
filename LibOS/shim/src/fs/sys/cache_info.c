@@ -15,10 +15,10 @@
 #include "shim_fs.h"
 #include "shim_fs_pseudo.h"
 
-static bool bitmap_get_callback(size_t pos, const void* _bitmap) {
-    const struct bitmap* bitmap = (const struct bitmap*)_bitmap;
-    return bitmap_get(bitmap, pos);
-}
+// static bool bitmap_get_callback(size_t pos, const void* _bitmap) {
+//     const struct bitmap* bitmap = (const struct bitmap*)_bitmap;
+//     return bitmap_get(bitmap, pos);
+// }
 
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
@@ -70,8 +70,8 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     //     ret = -ENOENT;
     // }
 
-    if (ret < 0)
-        return ret;
+    // if (ret < 0)
+    //     return ret;
 
-    return sys_load(str, out_data, out_size);
+    // return sys_load(str, out_data, out_size);
 }

@@ -44,36 +44,43 @@ int sys_cpu_general_load(struct shim_dentry* dent, char** out_data, size_t* out_
     return sys_load(str, out_data, out_size);
 }
 
+static bool is_in_same_core(size_t pos, const void* _arg) {
+    size_t arg_id = *(const size_t*)_arg;
+    return g_pal_public_state->topo_info.cores[pos].socket_id == arg_id;
+}
+
+static bool is_in_same_socket(size_t pos, const void* _arg) {
+    size_t arg_id = *(const size_t*)_arg;
+    return g_pal_public_state->topo_info.threads[pos].core_id == arg_id;
+}
+
 int sys_cpu_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
-    unsigned int cpu_num;
-    ret = sys_resource_find(dent, "cpu", &cpu_num);
+    unsigned int thread_num;
+    ret = sys_resource_find(dent, "cpu", &thread_num);
     if (ret < 0)
         return ret;
 
     const char* name = dent->name;
-    struct pal_core_info* core_info = &g_pal_public_state->topo_info.cores[cpu_num];
+    struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
+    struct pal_cpu_thread_info* thread_info = &topo_info->threads[thread_num];
+    struct pal_cpu_core_info*   core_info   = &topo_info->cores[thread_info->core_id];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "online") == 0) {
         /* `cpu/cpuX/online` is not present for cpu0 */
-        if (cpu_num == 0)
+        if (thread_num == 0)
             return -ENOENT;
-        ret = snprintf(str, sizeof(str), "%d\n", (int)core_info->is_online);
+        ret = snprintf(str, sizeof(str), "%d\n", (int)thread_info->is_online);
     } else if (strcmp(name, "core_id") == 0) {
-        /* Linux docs: "the CPU core ID of cpuX. Typically it is the hardware platform’s identifier
-         * (rather than the kernel’s). The actual value is architecture and platform dependent."
-         * So, let's just output the kernel ID instead and everything should be fine.
-         *
-         * TODO: can this trash hyper-threading-aware scheduling? or rather the libraries use
-         * *_siblings fields?
-         */
-        ret = snprintf(str, sizeof(str), "%u\n", cpu_num);
+        ret = snprintf(str, sizeof(str), "%u\n", thread_info->core_id);
     } else if (strcmp(name, "physical_package_id") == 0) {
         ret = snprintf(str, sizeof(str), "%zu\n", core_info->socket_id);
-    } else if (strcmp(name, "core_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->core_siblings, str, sizeof(str));
     } else if (strcmp(name, "thread_siblings") == 0) {
-        ret = sys_convert_ranges_to_cpu_bitmap_str(&core_info->thread_siblings, str, sizeof(str));
+        ret = sys_print_as_bitmask(str, sizeof(str), topo_info->threads_cnt, is_in_same_core,
+                                   &thread_info->core_id);
+    } else if (strcmp(name, "core_siblings") == 0) {
+        ret = sys_print_as_bitmask(str, sizeof(str), topo_info->cores_cnt, is_in_same_socket,
+                                   &core_info->socket_id);
     } else {
         log_debug("unrecognized file: %s", name);
         ret = -ENOENT;
@@ -90,22 +97,22 @@ bool sys_cpu_online_name_exists(struct shim_dentry* parent, const char* name) {
         return false;
 
     int ret;
-    unsigned int cpu_num;
-    ret = sys_resource_find(parent, "cpu", &cpu_num);
+    unsigned int thread_num;
+    ret = sys_resource_find(parent, "cpu", &thread_num);
     if (ret < 0)
         return false;
 
-    return cpu_num != 0;
+    return thread_num != 0;
 }
 
 int sys_cpu_online_list_names(struct shim_dentry* parent, readdir_callback_t callback, void* arg) {
     int ret;
-    unsigned int cpu_num;
-    ret = sys_resource_find(parent, "cpu", &cpu_num);
+    unsigned int thread_num;
+    ret = sys_resource_find(parent, "cpu", &thread_num);
     if (ret < 0)
         return ret;
 
-    if (cpu_num != 0) {
+    if (thread_num != 0) {
         ret = callback("online", arg);
         if (ret < 0)
             return ret;

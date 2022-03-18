@@ -16,7 +16,7 @@
 
 static bool is_online(size_t ind, const void* _topo_info) {
     struct pal_topo_info* topo_info = (struct pal_topo_info*)_topo_info;
-    return topo_info->numa_topo_arr[ind].is_online;
+    return topo_info->numa_nodes[ind].is_online;
 }
 
 static bool return_true(size_t ind, const void* arg) {
@@ -31,9 +31,9 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
     const char* name = dent->name;
     char str[PAL_SYSFS_BUF_FILESZ];
     if (strcmp(name, "online") == 0) {
-        ret = sys_print_as_ranges(str, sizeof(str), topo_info->nodes_cnt, is_online, topo_info);
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->numa_nodes_cnt, is_online, topo_info);
     } else if (strcmp(name, "possible") == 0) {
-        ret = sys_print_as_ranges(str, sizeof(str), topo_info->nodes_cnt, return_true, NULL);
+        ret = sys_print_as_ranges(str, sizeof(str), topo_info->numa_nodes_cnt, return_true, NULL);
     } else {
         log_debug("unrecognized file: %s", name);
         return -ENOENT;
@@ -45,31 +45,34 @@ int sys_node_general_load(struct shim_dentry* dent, char** out_data, size_t* out
     return sys_load(str, out_data, out_size);
 }
 
-static bool bitmap_get_callback(size_t pos, const void* _bitmap) {
-    const struct bitmap* bitmap = (const struct bitmap*)_bitmap;
-    return bitmap_get(bitmap, pos);
+static bool is_in_same_node(size_t pos, const void* _arg) {
+    unsigned int arg_node_id = *(const unsigned int*)_arg;
+    size_t core_id   = g_pal_public_state->topo_info.threads[pos].core_id;
+    size_t socket_id = g_pal_public_state->topo_info.cores[core_id].socket_id;
+    size_t node_id   = g_pal_public_state->topo_info.sockets[socket_id].node_id;
+    return node_id == arg_node_id;
 }
 
 int sys_node_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
     int ret;
-    unsigned int node_ind;
-    ret = sys_resource_find(dent, "node", &node_ind);
+    unsigned int node_id;
+    ret = sys_resource_find(dent, "node", &node_id);
     if (ret < 0)
         return ret;
 
     const char* name = dent->name;
     const struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
-    const struct pal_numa_node_info* numa_topo = &topo_info->numa_topo_arr[node_ind];
+    const struct pal_numa_node_info* numa_topo = &topo_info->numa_nodes[node_id];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "cpumap") == 0) {
-        ret = sys_print_as_bitmask(str, sizeof(str), bitmap_get_end(&numa_topo->cpu_map),
-                                   bitmap_get_callback, &numa_topo->cpu_map);
+        ret = sys_print_as_bitmask(str, sizeof(str), topo_info->threads_cnt,
+                                   is_in_same_node, &node_id);
     } else if (strcmp(name, "distance") == 0) {
-        size_t* distances = topo_info->numa_distance_matrix + node_ind * topo_info->nodes_cnt;
+        size_t* distances = topo_info->numa_distance_matrix + node_id * topo_info->numa_nodes_cnt;
         size_t str_pos = 0;
-        for (size_t i = 0; i < topo_info->nodes_cnt; i++) {
+        for (size_t i = 0; i < topo_info->numa_nodes_cnt; i++) {
             ret = snprintf(str + str_pos, sizeof(str) - str_pos,
-                           "%zu%s", distances[i], i != (topo_info->nodes_cnt - 1) ? " " : "\n");
+                           "%zu%s", distances[i], i != (topo_info->numa_nodes_cnt - 1) ? " " : "\n");
             if (ret < 0)
                 return ret;
             if ((size_t)ret >= sizeof(str) - str_pos)

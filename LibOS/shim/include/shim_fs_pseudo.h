@@ -224,17 +224,10 @@ int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
                         bool (*is_present)(size_t ind, const void* arg), const void* callback_arg);
 
 /* Prints into the sysfs bitmask format, with bitmask size based on `count`.
- * Example: count=64, 0-15,48-55 present: "00ff0000,0000ffff\n".
+ * Example: count=64, indices 0-15,48-55 present: "00ff0000,0000ffff\n".
  */
 int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
                          bool (*is_present)(size_t ind, const void* arg),
                          const void* callback_arg);
-
-/* Converts struct pal_res_range_info to a sysfs CPU bitmask representation with bitmask size based
- * on the possible cores count in the system.
- * Example output for 64 cores in total and ranges 0-15,48-55: "00ff0000,0000ffff".
- * Note: This function adds a newline at the end of the string. */
-int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
-                                         char* str, size_t str_size);
 
 #endif /* SHIM_FS_PSEUDO_H_ */

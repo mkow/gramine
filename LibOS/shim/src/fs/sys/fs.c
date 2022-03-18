@@ -79,67 +79,6 @@ int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
     return 0;
 }
 
-int sys_convert_ranges_to_cpu_bitmap_str(const struct pal_res_range_info* resource_range_info,
-                                         char* str, size_t str_size) {
-    int ret;
-
-    /* Extract cpumask from the ranges */
-    size_t possible_logical_cores_cnt = g_pal_public_state->topo_info.cores_cnt;
-    size_t cpumask_cnt = BITS_TO_UINT32S(possible_logical_cores_cnt);
-    assert(cpumask_cnt > 0);
-
-    uint32_t* bitmap = calloc(cpumask_cnt, sizeof(*bitmap));
-    if (!bitmap)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < resource_range_info->ranges_cnt; i++) {
-        size_t start = resource_range_info->ranges_arr[i].start;
-        size_t end = resource_range_info->ranges_arr[i].end;
-
-        for (size_t j = start; j <= end; j++) {
-            size_t index = j / BITS_IN_TYPE(uint32_t);
-            assert(index < cpumask_cnt);
-
-            bitmap[index] |= 1U << (j % BITS_IN_TYPE(uint32_t));
-        }
-    }
-
-    /* Convert cpumask to strings */
-    size_t offset = 0;
-    for (size_t j = cpumask_cnt; j > 0; j--) {
-        if (offset >= str_size) {
-            ret = -ENOMEM;
-            goto out;
-        }
-
-        /* Linux doesn't print leading zeroes for systems with less than 32 cores, e.g. "fff" for
-         * 12 cores; we mimic this behavior. */
-        if (possible_logical_cores_cnt >= 32) {
-            ret = snprintf(str + offset, str_size - offset, "%08x%s", bitmap[j-1],
-                           (j-1 == 0) ? "\n" : ",");
-        } else {
-            ret = snprintf(str + offset, str_size - offset, "%x%s", bitmap[j-1],
-                           (j-1 == 0) ? "\n" : ",");
-        }
-
-        if (ret < 0)
-            goto out;
-
-        /* Truncation has occurred */
-        if ((size_t)ret >= str_size - offset) {
-            ret = -EOVERFLOW;
-            goto out;
-        }
-
-        offset += ret;
-    }
-    ret = 0;
-
-out:
-    free(bitmap);
-    return ret;
-}
-
 static int sys_resource(struct shim_dentry* parent, const char* name, unsigned int* out_num,
                         readdir_callback_t callback, void* arg) {
     const char* parent_name = parent->name;
@@ -147,7 +86,7 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* prefix;
 
     if (strcmp(parent_name, "node") == 0) {
-        total = g_pal_public_state->topo_info.nodes_cnt;
+        total = g_pal_public_state->topo_info.numa_nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
         total = g_pal_public_state->topo_info.cores_cnt;
@@ -275,9 +214,6 @@ static void init_node_dir(struct pseudo_node* node) {
 }
 
 int init_sysfs(void) {
-    if (!g_pal_public_state->enable_sysfs_topology)
-        return 0;
-
     struct pseudo_node* root = pseudo_add_root_dir("sys");
     struct pseudo_node* devices = pseudo_add_dir(root, "devices");
     struct pseudo_node* system = pseudo_add_dir(devices, "system");

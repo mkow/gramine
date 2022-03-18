@@ -69,8 +69,8 @@ static int read_numbers_from_file(const char* path, size_t* out_arr, size_t coun
 }
 
 // Not suitable for untrusted inputs! (due to overflows and liberal parsing)
-static int iterate_set_from_file(const char* path, int (*callback)(size_t index, void* arg),
-                                 void* callback_arg) {
+static int iterate_ranges_from_file(const char* path, int (*callback)(size_t index, void* arg),
+                                    void* callback_arg) {
     char buf[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
@@ -116,112 +116,51 @@ static int iterate_set_from_file(const char* path, int (*callback)(size_t index,
     return 0;
 }
 
-/* Opens a pseudo-file describing HW resources such as online CPUs and counts the number of
- * HW resources and their ranges present in the file. The result is stored in `out_info`.
- * Returns UNIX error code on failure and 0 on success.
- * N.B: Understands complex formats like "1,3-5,7". */
-static int get_hw_resource_range(const char* filename, struct pal_res_range_info* out_info) {
-    assert(out_info);
+// ehh... time for macroized for loops maybe?
 
-    /* Clear user supplied buffer */
-    out_info->resource_cnt = 0;
-    out_info->ranges_cnt = 0;
-    out_info->ranges_arr = NULL;
+struct two_arg_call {
+    int (*f)(size_t index, void* arg1, void* arg2);
+    void* arg1;
+    void* arg2;
+};
 
-    char str[PAL_SYSFS_BUF_FILESZ];
-    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
-    if (ret < 0)
-        return ret;
+struct three_arg_call {
+    int (*f)(size_t index, void* arg1, void* arg2);
+    void* arg1;
+    void* arg2;
+};
 
-    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+static int do_two_arg_call(size_t index, void* _call) {
+    struct two_arg_call* call = (struct two_arg_call*)_call;
+    return call->f(index, call->arg1, call->arg2);
+}
 
-    char* ptr = str;
-    while (*ptr) {
-        while (*ptr == ' ' || *ptr == ',')
-            ptr++;
+static int do_three_arg_call(size_t index, void* _call) {
+    struct three_arg_call* call = (struct three_arg_call*)_call;
+    return call->f(index, call->arg1, call->arg2, call->arg3);
+}
 
-        char* end;
-        long start_val = strtol(ptr, &end, 10);
-        if (start_val < 0) {
-            ret = -ENOENT;
-            goto fail;
-        }
+static int iterate_ranges_from_file2(const char* path,
+                                     int (*callback)(size_t index, void* arg1, void* arg2),
+                                     void* callback_arg1, void* callback_arg2) {
+    struct two_arg_call call = {
+        .f = callback,
+        .arg1 = callback_arg1,
+        .arg2 = callback_arg2,
+    };
+    return iterate_ranges_from_file(path, do_two_arg_call, &call);
+}
 
-        if (ptr == end)
-            break;
-
-        size_t range_start;
-        size_t range_end;
-
-        if (*end == '\0' || *end == ',' || *end == '\n' || *end == ' ') {
-            range_start = start_val;
-            range_end = start_val;
-
-            if (__builtin_add_overflow(out_info->resource_cnt, 1, &out_info->resource_cnt)) {
-                ret = -EOVERFLOW;
-                goto fail;
-            }
-        } else if (*end == '-') {
-            ptr = end + 1;
-            long end_val = strtol(ptr, &end, 10);
-            if (end_val < 0 || end_val < start_val) {
-                ret = -EINVAL;
-                goto fail;
-            }
-
-            range_start = start_val;
-            range_end = end_val;
-
-            size_t diff = end_val - start_val + 1; /* +1 because of inclusive range */
-            if (__builtin_add_overflow(out_info->resource_cnt, diff, &out_info->resource_cnt)) {
-                ret = -EOVERFLOW;
-                goto fail;
-            }
-        } else {
-            /* Illegal character found */
-            ret = -EINVAL;
-            goto fail;
-        }
-
-        /* Update range info */
-        out_info->ranges_cnt++;
-
-        /* Realloc the array of ranges (expand by one range) */
-        size_t new_size = sizeof(struct pal_range_info) * out_info->ranges_cnt;
-        size_t old_size = new_size - sizeof(struct pal_range_info);
-        /* TODO: Optimize realloc by doing some overestimation and trimming later once the
-         * range count is known */
-        struct pal_range_info* tmp = malloc(new_size);
-        if (!tmp) {
-            ret = -ENOMEM;
-            goto fail;
-        }
-
-        if (out_info->ranges_arr) {
-            memcpy(tmp, out_info->ranges_arr, old_size);
-            free(out_info->ranges_arr);
-        }
-        out_info->ranges_arr = tmp;
-        out_info->ranges_arr[out_info->ranges_cnt - 1].start = range_start;
-        out_info->ranges_arr[out_info->ranges_cnt - 1].end = range_end;
-
-        ptr = end;
-    }
-
-    if (!out_info->resource_cnt || !out_info->ranges_cnt) {
-        ret = -EINVAL;
-        goto fail;
-    }
-
-    return 0;
-
-fail:
-    free(out_info->ranges_arr);
-    out_info->resource_cnt = 0;
-    out_info->ranges_cnt = 0;
-    out_info->ranges_arr = NULL;
-
-    return ret;
+static int iterate_ranges_from_file3(const char* path,
+                                     int (*callback)(size_t index, void* arg1, void* arg2, void* arg3),
+                                     void* callback_arg1, void* callback_arg2, void* callback_arg3) {
+    struct three_arg_call call = {
+        .f = callback,
+        .arg1 = callback_arg1,
+        .arg2 = callback_arg2,
+        .arg3 = callback_arg3,
+    };
+    return iterate_ranges_from_file(path, do_three_arg_call, &call);
 }
 
 ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
@@ -320,7 +259,7 @@ static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
             goto fail;
 
         bitmap_init(&ci->shared_cpus);
-        ret = iterate_set_from_file(filename, set_bit_in_bitmap, &ci->shared_cpus);
+        ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &ci->shared_cpus);
         if (ret < 0)
             goto fail;
 
@@ -392,114 +331,33 @@ static int get_ranges_end(size_t ind, void* _arg) {
     return 0;
 }
 
-static int set_core_online(size_t ind, void* _cores) {
-    struct pal_core_info* cores = (struct pal_core_info*)_cores;
-    cores[ind].is_online = true;
+static int set_thread_online(size_t ind, void* _threads) {
+    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    threads[ind].is_online = true;
     return 0;
 }
 
-static int get_core_topo_info(struct pal_topo_info* topo_info) {
-    size_t cores_cnt = 0;
-    int ret = iterate_set_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &cores_cnt);
-    if (ret < 0)
-        return ret;
-    topo_info->cores_cnt = cores_cnt;
-
-    ret = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache", &topo_info->cache_indices_cnt);
-    if (ret < 0)
-        return ret;
-
-    struct pal_core_info* core_info_arr = malloc(cores_cnt * sizeof(*core_info_arr));
-    if (!core_info_arr)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < cores_cnt; i++)
-        core_info_arr[i].is_online = false;
-    ret = iterate_set_from_file("/sys/devices/system/cpu/online", set_core_online, core_info_arr);
-    if (ret < 0)
-        return ret;
-
-    size_t current_max_socket = 0;
-    char dirname[PAL_SYSFS_PATH_SIZE];
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t i = 0; i < cores_cnt; i++) {
-        if (!core_info_arr[i].is_online)
-            /* no information is available for offline cores */
-            // TODO: fill with something?
-            continue;
-
-        ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu", i);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/core_siblings_list", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &core_info_arr[i].core_siblings);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/thread_siblings_list", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_range(filename, &core_info_arr[i].thread_siblings);
-        if (ret < 0)
-            goto out;
-
-        ret = snprintf(filename, sizeof(filename), "%s/topology/physical_package_id", dirname);
-        if (ret < 0)
-            goto out;
-        ret = get_hw_resource_value(filename, &core_info_arr[i].socket_id);
-        if (ret < 0)
-            goto out;
-
-        if (core_info_arr[i].socket_id > current_max_socket)
-            current_max_socket = core_info_arr[i].socket_id;
-
-        ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
-                                  &core_info_arr[i].cache_info_arr);
-        if (ret < 0)
-            goto out;
-    }
-
-    topo_info->cores = core_info_arr;
-    topo_info->sockets_cnt = current_max_socket + 1;
-    topo_info->physical_cores_per_socket = core_info_arr[0].core_siblings.resource_cnt /
-                                           core_info_arr[0].thread_siblings.resource_cnt;
+static int set_numa_node_online(size_t ind, void* _numa_nodes) {
+    struct pal_numa_node_info* numa_nodes = (struct pal_numa_node_info*)_numa_nodes;
+    numa_nodes[ind].is_online = true;
     return 0;
-
-out:
-    free(core_info_arr);
-    return ret;
 }
 
-static int set_numa_node_online(size_t ind, void* _numa_topo_arr) {
-    struct pal_numa_node_info* numa_topo_arr = (struct pal_numa_node_info*)_numa_topo_arr;
-    numa_topo_arr[ind].is_online = true;
+static int set_core_id(size_t ind, void* _threads, void* _id) {
+    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    size_t id = (size_t*)_id;
+    threads[ind].core_id = id;
+    return 0;
+}
+
+static int set_socket_id(size_t ind, void* _cores, void* _id) {
+    struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
+    size_t id = (size_t*)_id;
+    cores[ind].socket_id = id;
     return 0;
 }
 
 static int get_numa_topo_info(struct pal_topo_info* topo_info) {
-    int ret;
-    size_t nodes_cnt = 0;
-    ret = iterate_set_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if (ret < 0)
-        return ret;
-
-    topo_info->nodes_cnt = nodes_cnt;
-
-    struct pal_numa_node_info* numa_topo_arr = malloc(nodes_cnt * sizeof(*numa_topo_arr));
-    if (!numa_topo_arr)
-        return -ENOMEM;
-
-    for (size_t i = 0; i < nodes_cnt; i++)
-        numa_topo_arr[i].is_online = false;
-    // ret = get_hw_resource_range(, &topo_info->online_nodes);
-    ret = iterate_set_from_file("/sys/devices/system/node/online", set_numa_node_online,
-                                numa_topo_arr);
-    if (ret < 0)
-        return ret;
-
     size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
     if (!distances) {
         ret = -ENOMEM;
@@ -511,10 +369,9 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
         ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpulist", idx);
         if (ret < 0)
             goto out;
-        bitmap_init(&numa_topo_arr[idx].cpu_map);
-        ret = iterate_set_from_file(filename, set_bit_in_bitmap, &numa_topo_arr[idx].cpu_map);
-        if (ret < 0)
-            goto out;
+        // ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &numa_nodes[idx].cpu_map);
+        // if (ret < 0)
+        //     goto out;
 
         ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
         if (ret < 0)
@@ -525,28 +382,121 @@ static int get_numa_topo_info(struct pal_topo_info* topo_info) {
 
         /* Since our /sys fs doesn't support writes, set persistent hugepages to their default value
          * of zero */
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_topo_arr[idx].nr_hugepages[HUGEPAGES_1G] = 0;
+        numa_nodes[idx].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[idx].nr_hugepages[HUGEPAGES_1G] = 0;
     }
-    topo_info->numa_topo_arr = numa_topo_arr;
+    topo_info->numa_nodes = numa_nodes;
     topo_info->numa_distance_matrix = distances;
     return 0;
 
 out:
-    free(numa_topo_arr);
     return ret;
 }
 
 int get_topology_info(struct pal_topo_info* topo_info) {
-    /* Get CPU topology information */
-    int ret = get_core_topo_info(topo_info);
+    size_t threads_cnt = 0;
+    int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
+    if (ret < 0)
+        return ret;
+    size_t nodes_cnt = 0;
+    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
     if (ret < 0)
         return ret;
 
-    /* Get NUMA topology information */
-    ret = get_numa_topo_info(topo_info);
+    // ret = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache", &topo_info->cache_indices_cnt);
+    // if (ret < 0)
+    //     return ret;
+
+    struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
+    size_t cores_cnt = 0;
+    struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
+    size_t sockets_cnt = 0;
+    struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
+    size_t cores_cnt = 0;
+    struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
+    if (!threads || !cores || !sockets || !numa_nodes) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    for (size_t i = 0; i < threads_cnt; i++) {
+        threads[i].is_online = false;
+        threads[i].core_id = -1;
+        cores[i].socket_id = -1;
+        sockets[i].node_id = -1;
+    }
+    for (size_t i = 0; i < nodes_cnt; i++)
+        numa_nodes[i].is_online = false;
+
+    ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
+    if (ret < 0)
+        return ret;
+    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
+                                   numa_nodes);
     if (ret < 0)
         return ret;
 
+
+    char path[PAL_SYSFS_PATH_SIZE];
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            /* no information is available for offline threads */
+            continue;
+
+        if (threads[i].core_id == -1) {
+            // insert new core to the list
+            snprintf(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings_list", i); // includes ourselves
+            ret = iterate_ranges_from_file2(path, set_core_id, threads, &cores_cnt);
+            if (ret < 0)
+                goto out;
+            cores_cnt++;
+        }
+    }
+
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            continue;
+
+        size_t core_id = threads[i].core_id;
+        if (cores[core_id].socket_id == -1) {
+            // insert new socket to the list
+            snprintf(path, sizeof(path),
+                     "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", i);
+            ret = iterate_ranges_from_file3(path, set_socket_id, threads, cores, &sockets_cnt);
+            if (ret < 0)
+                goto out;
+            sockets_cnt++;
+        }
+    }
+
+    for (size_t i = 0; i < nodes_cnt; i++)
+        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+        ret = iterate_ranges_from_file2(path, &threads[i].socket_id);
+        if (ret < 0)
+            goto out;
+
+
+        // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
+        //                           &threads[i].cache_info_arr);
+        // if (ret < 0)
+        //     goto out;
+    }
+
+    topo_info->threads_cnt    = threads_cnt;
+    topo_info->cores_cnt      = cores_cnt;
+    topo_info->sockets_cnt    = sockets_cnt;
+    topo_info->numa_nodes_cnt = numa_nodes_cnt;
+    topo_info->threads    = threads;
+    topo_info->cores      = cores;
+    topo_info->sockets    = sockets;
+    topo_info->numa_nodes = numa_nodes;
     return 0;
+
+out:
+    free(threads);
+    free(cores);
+    free(sockets);
+    free(numa_nodes);
+    return ret;
 }

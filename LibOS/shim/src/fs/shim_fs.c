@@ -140,11 +140,9 @@ static int mount_sys(void) {
     if (ret < 0)
         return ret;
 
-    if (g_pal_public_state->enable_sysfs_topology) {
-        ret = mount_fs("pseudo", "sys", "/sys");
-        if (ret < 0)
-            return ret;
-    }
+    ret = mount_fs("pseudo", "sys", "/sys");
+    if (ret < 0)
+        return ret;
 
     return 0;
 }

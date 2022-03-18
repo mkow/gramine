@@ -528,15 +528,11 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_public_state.mem_total = _DkMemoryQuota();
 
-    /* TODO: temporary measure, remove it once sysfs topology is thoroughly validated */
-    bool enable_sysfs_topology;
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "fs.experimental__enable_sysfs_topology",
-                       /*defaultval=*/false, &enable_sysfs_topology);
-    if (ret < 0) {
-        INIT_FAIL_MANIFEST(PAL_ERROR_INVAL, "Cannot parse 'fs.experimental__enable_sysfs_topology' "
-                                            "(the value must be `true` or `false`)");
+    if (toml_key_exists(g_pal_public_state.manifest_root,
+                        "fs.experimental__enable_sysfs_topology")) {
+        log_warning("fs.experimental__enable_sysfs_topology is deprecated and sysfs topology is "
+                    "enabled by default now.");
     }
-    g_pal_public_state.enable_sysfs_topology = enable_sysfs_topology;
 
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)

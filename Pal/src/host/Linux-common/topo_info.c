@@ -261,97 +261,97 @@ static int set_bit_in_bitmap(size_t pos, void* _bitmap) {
     return bitmap_set(bitmap, pos);
 }
 
-static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-                               struct pal_core_cache_info** out_cache_info_arr) {
-    int ret;
+// static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
+//                                struct pal_core_cache_info** out_cache_info_arr) {
+//     int ret;
 
-    struct pal_core_cache_info* cache_info_arr =
-        malloc(cache_indices_cnt * sizeof(*cache_info_arr));
-    if (!cache_info_arr) {
-        return -ENOMEM;
-    }
+//     struct pal_core_cache_info* cache_info_arr =
+//         malloc(cache_indices_cnt * sizeof(*cache_info_arr));
+//     if (!cache_info_arr) {
+//         return -ENOMEM;
+//     }
 
-    char dirname[PAL_SYSFS_PATH_SIZE];
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-        struct pal_core_cache_info* ci = &cache_info_arr[cache_idx];
+//     char dirname[PAL_SYSFS_PATH_SIZE];
+//     char filename[PAL_SYSFS_PATH_SIZE];
+//     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
+//         struct pal_core_cache_info* ci = &cache_info_arr[cache_idx];
 
-        ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu/cache/index%zu",
-                       core_idx, cache_idx);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu/cache/index%zu",
+//                        core_idx, cache_idx);
+//         if (ret < 0)
+//             goto fail;
 
-        ret = snprintf(filename, sizeof(filename), "%s/shared_cpu_list", dirname);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(filename, sizeof(filename), "%s/shared_cpu_list", dirname);
+//         if (ret < 0)
+//             goto fail;
 
-        bitmap_init(&ci->shared_cpus);
-        ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &ci->shared_cpus);
-        if (ret < 0)
-            goto fail;
+//         bitmap_init(&ci->shared_cpus);
+//         ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &ci->shared_cpus);
+//         if (ret < 0)
+//             goto fail;
 
-        ret = snprintf(filename, sizeof(filename), "%s/level", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &ci->level);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(filename, sizeof(filename), "%s/level", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = get_hw_resource_value(filename, &ci->level);
+//         if (ret < 0)
+//             goto fail;
 
-        char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
-        ret = snprintf(filename, sizeof(filename), "%s/type", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = read_file_buffer(filename, type, sizeof(type) - 1);
-        if (ret < 0)
-            goto fail;
-        type[ret] = '\0';
+//         char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
+//         ret = snprintf(filename, sizeof(filename), "%s/type", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = read_file_buffer(filename, type, sizeof(type) - 1);
+//         if (ret < 0)
+//             goto fail;
+//         type[ret] = '\0';
 
-        if (!strcmp(type, "Unified\n")) {
-           ci->type = CACHE_TYPE_UNIFIED;
-        } else if (!strcmp(type, "Instruction\n")) {
-           ci->type = CACHE_TYPE_INSTRUCTION;
-        } else if (!strcmp(type, "Data\n")) {
-           ci->type = CACHE_TYPE_DATA;
-        } else {
-            ret = -EINVAL;
-            goto fail;
-        }
+//         if (!strcmp(type, "Unified\n")) {
+//            ci->type = CACHE_TYPE_UNIFIED;
+//         } else if (!strcmp(type, "Instruction\n")) {
+//            ci->type = CACHE_TYPE_INSTRUCTION;
+//         } else if (!strcmp(type, "Data\n")) {
+//            ci->type = CACHE_TYPE_DATA;
+//         } else {
+//             ret = -EINVAL;
+//             goto fail;
+//         }
 
-        ret = snprintf(filename, sizeof(filename), "%s/size", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &ci->size);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(filename, sizeof(filename), "%s/size", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = get_hw_resource_value(filename, &ci->size);
+//         if (ret < 0)
+//             goto fail;
 
-        ret = snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &ci->coherency_line_size);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = get_hw_resource_value(filename, &ci->coherency_line_size);
+//         if (ret < 0)
+//             goto fail;
 
-        ret = snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &ci->number_of_sets);
-        if (ret < 0)
-            goto fail;
+//         ret = snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = get_hw_resource_value(filename, &ci->number_of_sets);
+//         if (ret < 0)
+//             goto fail;
 
-        ret = snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
-        if (ret < 0)
-            goto fail;
-        ret = get_hw_resource_value(filename, &ci->physical_line_partition);
-        if (ret < 0)
-            goto fail;
-    }
-    *out_cache_info_arr = cache_info_arr;
-    return 0;
+//         ret = snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
+//         if (ret < 0)
+//             goto fail;
+//         ret = get_hw_resource_value(filename, &ci->physical_line_partition);
+//         if (ret < 0)
+//             goto fail;
+//     }
+//     *out_cache_info_arr = cache_info_arr;
+//     return 0;
 
-fail:
-    free(cache_info_arr);
-    return ret;
-}
+// fail:
+//     free(cache_info_arr);
+//     return ret;
+// }
 
 static int get_ranges_end(size_t ind, void* _arg) {
     *(size_t*)_arg = ind + 1;

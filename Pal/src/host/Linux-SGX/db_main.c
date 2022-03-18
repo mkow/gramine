@@ -112,21 +112,21 @@ fail:
     return NULL;
 }
 
-static int copy_bitmap_to_enclave(struct bitmap* shallow_src, struct bitmap* dst) {
-    // if (!sgx_copy_to_enclave(dst, sizeof(*dst), uptr_src, sizeof(*uptr_src)))
-    //     return -1;
-    size_t size;
-    if (__builtin_mul_overflow(shallow_src->buckets_cnt, sizeof(*dst->buckets), &size))
-        return -1;
-    void* buf = malloc(size);
-    if (!buf)
-        return -1;
-    if (!sgx_copy_to_enclave(buf, size, shallow_src->buckets, size))
-        return -1;
-    dst->buckets_cnt = shallow_src->buckets_cnt;
-    dst->buckets = buf;
-    return 0;
-}
+// static int copy_bitmap_to_enclave(struct bitmap* shallow_src, struct bitmap* dst) {
+//     // if (!sgx_copy_to_enclave(dst, sizeof(*dst), uptr_src, sizeof(*uptr_src)))
+//     //     return -1;
+//     size_t size;
+//     if (__builtin_mul_overflow(shallow_src->buckets_cnt, sizeof(*dst->buckets), &size))
+//         return -1;
+//     void* buf = malloc(size);
+//     if (!buf)
+//         return -1;
+//     if (!sgx_copy_to_enclave(buf, size, shallow_src->buckets, size))
+//         return -1;
+//     dst->buckets_cnt = shallow_src->buckets_cnt;
+//     dst->buckets = buf;
+//     return 0;
+// }
 
 // static int sanitize_cache_topo_info(struct pal_core_cache_info* cache_info_arr,
 //                                     size_t cores_cnt, size_t cache_indices_cnt) {
@@ -207,7 +207,7 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
     struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info.threads,    sizeof(*threads),    threads_cnt);
     struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info.cores,      sizeof(*cores),      cores_cnt);
     struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info.sockets,    sizeof(*sockets),    sockets_cnt);
-    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info.numa_nodes, sizeof(*numa_nodes), nodes_cnt);
+    struct pal_numa_node_info*  numa_nodes = sgx_import_array_to_enclave(shallow_topo_info.numa_nodes, sizeof(*numa_nodes), numa_nodes_cnt);
 
     size_t* distances = sgx_import_array2d_to_enclave(shallow_topo_info.numa_distance_matrix,
                                                       sizeof(*distances),
@@ -504,7 +504,7 @@ noreturn void pal_linux_main(char* uptr_libpal_uri, size_t libpal_uri_len, char*
     g_pal_public_state.manifest_root = manifest_root;
 
     /* parse and store host topology info into g_pal_linuxsgx_state struct */
-    ret = import_and_sanitize_topo_info(uptr_topo_info, enable_sysfs_topology);
+    ret = import_and_sanitize_topo_info(uptr_topo_info);
     if (ret < 0) {
         log_error("Failed to copy and sanitize topology information");
         ocall_exit(1, /*is_exitgroup=*/true);

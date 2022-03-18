@@ -19,34 +19,34 @@
 
 /* Opens a pseudo-file describing HW resources and simply reads the value stored in the file.
  * Returns UNIX error code on failure and 0 on success. */
-static int get_hw_resource_value(const char* filename, size_t* out_value) {
-    assert(out_value);
+// static int get_hw_resource_value(const char* filename, size_t* out_value) {
+//     assert(out_value);
 
-    char str[PAL_SYSFS_BUF_FILESZ];
-    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
-    if (ret < 0)
-        return ret;
+//     char str[PAL_SYSFS_BUF_FILESZ];
+//     int ret = read_file_buffer(filename, str, sizeof(str) - 1);
+//     if (ret < 0)
+//         return ret;
 
-    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+//     str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
 
-    char* end;
-    long val = strtol(str, &end, 10);
-    if (val < 0)
-        return -EINVAL;
+//     char* end;
+//     long val = strtol(str, &end, 10);
+//     if (val < 0)
+//         return -EINVAL;
 
-    if (*end != '\n' && *end != '\0' && *end != 'K') {
-        /* Illegal character found */
-        return -EINVAL;
-    }
+//     if (*end != '\n' && *end != '\0' && *end != 'K') {
+//         /* Illegal character found */
+//         return -EINVAL;
+//     }
 
-    if (*end == 'K') {
-        if (__builtin_mul_overflow(val, 1024, &val))
-            return -EOVERFLOW;
-    }
+//     if (*end == 'K') {
+//         if (__builtin_mul_overflow(val, 1024, &val))
+//             return -EOVERFLOW;
+//     }
 
-    *out_value = val;
-    return 0;
-}
+//     *out_value = val;
+//     return 0;
+// }
 
 static int read_numbers_from_file(const char* path, size_t* out_arr, size_t count) {
     char str[PAL_SYSFS_BUF_FILESZ];
@@ -214,52 +214,52 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
 /* This function stores the number of cache levels present on the system by counting "indexX" dir
  * entries under `/sys/devices/system/cpu/cpuX/cache` in `out_cache_indices_cnt`. Returns 0 on
  * success and negative UNIX error code on failure. */
-static int get_cache_levels_cnt(const char* path, size_t* out_cache_indices_cnt) {
-    assert(out_cache_indices_cnt);
+// static int get_cache_levels_cnt(const char* path, size_t* out_cache_indices_cnt) {
+//     assert(out_cache_indices_cnt);
 
-    char buf[1024];
-    int ret;
-    size_t dirs_cnt = 0;
+//     char buf[1024];
+//     int ret;
+//     size_t dirs_cnt = 0;
 
-    int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
-    if (fd < 0)
-        return fd;
+//     int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
+//     if (fd < 0)
+//         return fd;
 
-    while (true) {
-        int nread = DO_SYSCALL(getdents64, fd, buf, 1024);
-        if (nread < 0) {
-            ret = nread;
-            goto out;
-        }
+//     while (true) {
+//         int nread = DO_SYSCALL(getdents64, fd, buf, 1024);
+//         if (nread < 0) {
+//             ret = nread;
+//             goto out;
+//         }
 
-        if (nread == 0)
-            break;
+//         if (nread == 0)
+//             break;
 
-        for (int bpos = 0; bpos < nread;) {
-            struct linux_dirent64* dirent64 = (struct linux_dirent64*)(buf + bpos);
-            if (dirent64->d_type == DT_DIR && strstartswith(dirent64->d_name, "index"))
-                dirs_cnt++;
-            bpos += dirent64->d_reclen;
-        }
-    }
+//         for (int bpos = 0; bpos < nread;) {
+//             struct linux_dirent64* dirent64 = (struct linux_dirent64*)(buf + bpos);
+//             if (dirent64->d_type == DT_DIR && strstartswith(dirent64->d_name, "index"))
+//                 dirs_cnt++;
+//             bpos += dirent64->d_reclen;
+//         }
+//     }
 
-    if (!dirs_cnt) {
-        ret = -ENOENT;
-        goto out;
-    }
+//     if (!dirs_cnt) {
+//         ret = -ENOENT;
+//         goto out;
+//     }
 
-    *out_cache_indices_cnt = dirs_cnt;
-    ret = 0;
+//     *out_cache_indices_cnt = dirs_cnt;
+//     ret = 0;
 
-out:
-    DO_SYSCALL(close, fd);
-    return ret;
-}
+// out:
+//     DO_SYSCALL(close, fd);
+//     return ret;
+// }
 
-static int set_bit_in_bitmap(size_t pos, void* _bitmap) {
-    struct bitmap* bitmap = (struct bitmap*)_bitmap;
-    return bitmap_set(bitmap, pos);
-}
+// static int set_bit_in_bitmap(size_t pos, void* _bitmap) {
+//     struct bitmap* bitmap = (struct bitmap*)_bitmap;
+//     return bitmap_set(bitmap, pos);
+// }
 
 // static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
 //                                struct pal_core_cache_info** out_cache_info_arr) {

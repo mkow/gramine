@@ -150,7 +150,7 @@ static int do_three_arg_call(size_t index, void* _call) {
 }
 
 static int do_four_arg_call(size_t index, void* _call) {
-    struct three_arg_call* call = (struct three_arg_call*)_call;
+    struct four_arg_call* call = (struct four_arg_call*)_call;
     return call->f(index, call->arg1, call->arg2, call->arg3, call->arg4);
 }
 

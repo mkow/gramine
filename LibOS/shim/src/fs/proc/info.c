@@ -158,7 +158,7 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("core id\t\t: %lu\n",   i);
         size_t cores_in_socket = 0;
         for (size_t j = 0; j < ti->cores_cnt; j++) // slow, but shouldn't matter
-            if (ti->cores[j]->socket_id == core->socket_id)
+            if (ti->cores[j].socket_id == core->socket_id)
                 cores_in_socket++;
         ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
         double bogomips = ci->cpu_bogomips;
@@ -198,8 +198,8 @@ int proc_stat_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
      * (see Linux's fs/proc/stat.c) */
     ADD_INFO("cpu  %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", user, nice, system, idle, iowait,
              irq, softirq, steal, guest, guest_nice);
-    for (size_t i = 0; i < g_pal_public_state->topo_info.cores_cnt; i++) {
-        if (!g_pal_public_state->topo_info.cores[i].is_online)
+    for (size_t i = 0; i < g_pal_public_state->topo_info.threads_cnt; i++) {
+        if (!g_pal_public_state->topo_info.thread[i].is_online)
             continue;
         ADD_INFO("cpu%lu %lu %lu %lu %lu %lu %lu %lu %lu %lu %lu\n", i, user, nice, system, idle,
                  iowait, irq, softirq, steal, guest, guest_nice);

@@ -413,7 +413,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
-    size_t nodes_cnt = 0;
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
     size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
     if (!threads || !cores || !sockets || !numa_nodes || !distances) {
@@ -499,7 +498,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     topo_info->threads_cnt    = threads_cnt;
     topo_info->cores_cnt      = cores_cnt;
     topo_info->sockets_cnt    = sockets_cnt;
-    topo_info->numa_nodes_cnt = numa_nodes_cnt;
+    topo_info->numa_nodes_cnt = nodes_cnt;
     topo_info->threads              = threads;
     topo_info->cores                = cores;
     topo_info->sockets              = sockets;

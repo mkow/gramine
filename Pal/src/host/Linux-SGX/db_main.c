@@ -174,8 +174,6 @@ fail:
 // }
 
 static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
-    int ret;
-
     /* Import topology information via an untrusted pointer. This is only a shallow copy and we use
      * this temp variable to do deep copy into `g_pal_public_state.topo_info` */
     struct pal_topo_info shallow_topo_info;

@@ -350,10 +350,20 @@ static int set_core_id(size_t ind, void* _threads, void* _id) {
     return 0;
 }
 
-static int set_socket_id(size_t ind, void* _cores, void* _id) {
+static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
+    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
     size_t id = (size_t*)_id;
-    cores[ind].socket_id = id;
+    cores[threads[ind].core_id].socket_id = id;
+    return 0;
+}
+
+static int set_node_id(size_t ind, void* _threads, void* _cores, void* _sockets, void* _id) {
+    struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
+    struct pal_socket_info* socket = (struct pal_socket_info*)_socket;
+    size_t id = (size_t*)_id;
+    sockets[cores[threads[ind].core_id].socket_id].node_id = id;
     return 0;
 }
 
@@ -470,18 +480,17 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < nodes_cnt; i++)
+    for (size_t i = 0; i < nodes_cnt; i++) {
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
-        ret = iterate_ranges_from_file2(path, &threads[i].socket_id);
+        ret = iterate_ranges_from_file4(path, set_node_id, threads, cores, sockets, &i);
         if (ret < 0)
             goto out;
-
-
-        // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
-        //                           &threads[i].cache_info_arr);
-        // if (ret < 0)
-        //     goto out;
     }
+
+    // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
+    //                           &threads[i].cache_info_arr);
+    // if (ret < 0)
+    //     goto out;
 
     topo_info->threads_cnt    = threads_cnt;
     topo_info->cores_cnt      = cores_cnt;

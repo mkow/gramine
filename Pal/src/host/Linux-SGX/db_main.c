@@ -128,50 +128,50 @@ static int copy_bitmap_to_enclave(struct bitmap* shallow_src, struct bitmap* dst
     return 0;
 }
 
-static int sanitize_cache_topo_info(struct pal_core_cache_info* cache_info_arr,
-                                    size_t cores_cnt, size_t cache_indices_cnt) {
-    __UNUSED(cores_cnt); // TODO
-    for (size_t i = 0; i < cache_indices_cnt; i++) {
-        if (cache_info_arr[i].type != CACHE_TYPE_DATA &&
-            cache_info_arr[i].type != CACHE_TYPE_INSTRUCTION &&
-            cache_info_arr[i].type != CACHE_TYPE_UNIFIED) {
-            return -1;
-        }
+// static int sanitize_cache_topo_info(struct pal_core_cache_info* cache_info_arr,
+//                                     size_t cores_cnt, size_t cache_indices_cnt) {
+//     __UNUSED(cores_cnt); // TODO
+//     for (size_t i = 0; i < cache_indices_cnt; i++) {
+//         if (cache_info_arr[i].type != CACHE_TYPE_DATA &&
+//             cache_info_arr[i].type != CACHE_TYPE_INSTRUCTION &&
+//             cache_info_arr[i].type != CACHE_TYPE_UNIFIED) {
+//             return -1;
+//         }
 
-        // size_t max_limit;
-        // if (cache_info_arr[i].type == CACHE_TYPE_DATA ||
-        //         cache_info_arr[i].type == CACHE_TYPE_INSTRUCTION) {
-        //     /* Taking HT into account */
-        //     max_limit = MAX_HYPERTHREADS_PER_CORE;
-        // } else {
-        //     /* if unified cache then it can range up to total number of cores. */
-        //     max_limit = cores_cnt;
-        // }
+//         // size_t max_limit;
+//         // if (cache_info_arr[i].type == CACHE_TYPE_DATA ||
+//         //         cache_info_arr[i].type == CACHE_TYPE_INSTRUCTION) {
+//         //     /* Taking HT into account */
+//         //     max_limit = MAX_HYPERTHREADS_PER_CORE;
+//         // } else {
+//         //     /* if unified cache then it can range up to total number of cores. */
+//         //     max_limit = cores_cnt;
+//         // }
 
-        // TODO: sanitize shared_cpus
-        // int ret = sanitize_hw_resource_range(&cache_info_arr[i].shared_cpus, 1, max_limit, 0,
-        //                                      cores_cnt);
-        // if (ret < 0) {
-        //     return -1;
-        // }
+//         // TODO: sanitize shared_cpus
+//         // int ret = sanitize_hw_resource_range(&cache_info_arr[i].shared_cpus, 1, max_limit, 0,
+//         //                                      cores_cnt);
+//         // if (ret < 0) {
+//         //     return -1;
+//         // }
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[i].level, 1, MAX_CACHE_LEVELS))
-            return -1;
+//         if (!IS_IN_RANGE_INCL(cache_info_arr[i].level, 1, MAX_CACHE_LEVELS))
+//             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[i].size, 1, 1 << 30))
-            return -1;
+//         if (!IS_IN_RANGE_INCL(cache_info_arr[i].size, 1, 1 << 30))
+//             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[i].coherency_line_size, 1, 1 << 16))
-            return -1;
+//         if (!IS_IN_RANGE_INCL(cache_info_arr[i].coherency_line_size, 1, 1 << 16))
+//             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[i].number_of_sets, 1, 1 << 30))
-            return -1;
+//         if (!IS_IN_RANGE_INCL(cache_info_arr[i].number_of_sets, 1, 1 << 30))
+//             return -1;
 
-        if (!IS_IN_RANGE_INCL(cache_info_arr[i].physical_line_partition, 1, 1 << 16))
-            return -1;
-    }
-    return 0;
-}
+//         if (!IS_IN_RANGE_INCL(cache_info_arr[i].physical_line_partition, 1, 1 << 16))
+//             return -1;
+//     }
+//     return 0;
+// }
 
 static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
     int ret;

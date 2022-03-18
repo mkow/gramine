@@ -91,9 +91,9 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     } else if (strcmp(parent_name, "cpu") == 0) {
         total = g_pal_public_state->topo_info.cores_cnt;
         prefix = "cpu";
-    } else if (strcmp(parent_name, "cache") == 0) {
-        total = g_pal_public_state->topo_info.cache_indices_cnt;
-        prefix = "index";
+    // } else if (strcmp(parent_name, "cache") == 0) {
+    //     total = g_pal_public_state->topo_info.cache_indices_cnt;
+    //     prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);
         return -ENOENT;

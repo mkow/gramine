@@ -89,7 +89,7 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
         total = g_pal_public_state->topo_info.numa_nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        total = g_pal_public_state->topo_info.cores_cnt;
+        total = g_pal_public_state->topo_info.threads_cnt;
         prefix = "cpu";
     // } else if (strcmp(parent_name, "cache") == 0) {
     //     total = g_pal_public_state->topo_info.cache_indices_cnt;

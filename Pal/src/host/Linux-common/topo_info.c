@@ -372,7 +372,7 @@ static int set_numa_node_online(size_t ind, void* _numa_nodes) {
 
 static int set_core_id(size_t ind, void* _threads, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
-    size_t id = (size_t*)_id;
+    size_t id = *(size_t*)_id;
     threads[ind].core_id = id;
     return 0;
 }
@@ -380,7 +380,7 @@ static int set_core_id(size_t ind, void* _threads, void* _id) {
 static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
-    size_t id = (size_t*)_id;
+    size_t id = *(size_t*)_id;
     cores[threads[ind].core_id].socket_id = id;
     return 0;
 }
@@ -389,7 +389,7 @@ static int set_node_id(size_t ind, void* _threads, void* _cores, void* _sockets,
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
     struct pal_socket_info* socket = (struct pal_socket_info*)_socket;
-    size_t id = (size_t*)_id;
+    size_t id = *(size_t*)_id;
     sockets[cores[threads[ind].core_id].socket_id].node_id = id;
     return 0;
 }

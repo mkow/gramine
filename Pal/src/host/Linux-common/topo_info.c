@@ -125,9 +125,18 @@ struct two_arg_call {
 };
 
 struct three_arg_call {
-    int (*f)(size_t index, void* arg1, void* arg2);
+    int (*f)(size_t index, void* arg1, void* arg2, void* arg3);
     void* arg1;
     void* arg2;
+    void* arg3;
+};
+
+struct four_arg_call {
+    int (*f)(size_t index, void* arg1, void* arg2, void* arg3, void* arg4);
+    void* arg1;
+    void* arg2;
+    void* arg3;
+    void* arg4;
 };
 
 static int do_two_arg_call(size_t index, void* _call) {
@@ -138,6 +147,11 @@ static int do_two_arg_call(size_t index, void* _call) {
 static int do_three_arg_call(size_t index, void* _call) {
     struct three_arg_call* call = (struct three_arg_call*)_call;
     return call->f(index, call->arg1, call->arg2, call->arg3);
+}
+
+static int do_four_arg_call(size_t index, void* _call) {
+    struct three_arg_call* call = (struct three_arg_call*)_call;
+    return call->f(index, call->arg1, call->arg2, call->arg3, call->arg4);
 }
 
 static int iterate_ranges_from_file2(const char* path,
@@ -161,6 +175,19 @@ static int iterate_ranges_from_file3(const char* path,
         .arg3 = callback_arg3,
     };
     return iterate_ranges_from_file(path, do_three_arg_call, &call);
+}
+
+static int iterate_ranges_from_file4(const char* path,
+                                     int (*callback)(size_t index, void* arg1, void* arg2, void* arg3, void* arg4),
+                                     void* callback_arg1, void* callback_arg2, void* callback_arg3, void* callback_arg4) {
+    struct four_arg_call call = {
+        .f = callback,
+        .arg1 = callback_arg1,
+        .arg2 = callback_arg2,
+        .arg3 = callback_arg3,
+        .arg4 = callback_arg4,
+    };
+    return iterate_ranges_from_file(path, do_four_arg_call, &call);
 }
 
 ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {

@@ -39,15 +39,15 @@ enum cache_type {
     CACHE_TYPE_UNIFIED,
 };
 
-// struct pal_core_cache_info {
-//     struct bitmap shared_cpus; // excludes offline CPUs, includes itself
-//     size_t level;
-//     enum cache_type type;
-//     size_t size;
-//     size_t coherency_line_size;
-//     size_t number_of_sets;
-//     size_t physical_line_partition;
-// };
+struct pal_core_cache_info {
+    // struct bitmap shared_cpus; // excludes offline CPUs, includes itself
+    size_t level;
+    enum cache_type type;
+    size_t size;
+    size_t coherency_line_size;
+    size_t number_of_sets;
+    size_t physical_line_partition;
+};
 
 struct pal_cpu_thread_info {
     bool is_online;

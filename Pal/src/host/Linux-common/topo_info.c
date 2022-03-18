@@ -388,46 +388,10 @@ static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
 static int set_node_id(size_t ind, void* _threads, void* _cores, void* _sockets, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
-    struct pal_socket_info* socket = (struct pal_socket_info*)_socket;
+    struct pal_socket_info* sockets = (struct pal_socket_info*)_sockets;
     size_t id = *(size_t*)_id;
     sockets[cores[threads[ind].core_id].socket_id].node_id = id;
     return 0;
-}
-
-static int get_numa_topo_info(struct pal_topo_info* topo_info) {
-    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
-    if (!distances) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
-    char filename[PAL_SYSFS_PATH_SIZE];
-    for (size_t idx = 0; idx < nodes_cnt; idx++) {
-        ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/cpulist", idx);
-        if (ret < 0)
-            goto out;
-        // ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &numa_nodes[idx].cpu_map);
-        // if (ret < 0)
-        //     goto out;
-
-        ret = snprintf(filename, sizeof(filename), "/sys/devices/system/node/node%zu/distance", idx);
-        if (ret < 0)
-            goto out;
-        ret = read_numbers_from_file(filename, distances + idx * nodes_cnt, nodes_cnt);
-        if (ret < 0)
-            goto out;
-
-        /* Since our /sys fs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[idx].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[idx].nr_hugepages[HUGEPAGES_1G] = 0;
-    }
-    topo_info->numa_nodes = numa_nodes;
-    topo_info->numa_distance_matrix = distances;
-    return 0;
-
-out:
-    return ret;
 }
 
 int get_topology_info(struct pal_topo_info* topo_info) {
@@ -451,7 +415,8 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
     size_t cores_cnt = 0;
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
-    if (!threads || !cores || !sockets || !numa_nodes) {
+    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
+    if (!threads || !cores || !sockets || !numa_nodes || !distances) {
         ret = -ENOMEM;
         goto out;
     }
@@ -512,8 +477,20 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         ret = iterate_ranges_from_file4(path, set_node_id, threads, cores, sockets, &i);
         if (ret < 0)
             goto out;
-    }
 
+        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+        if (ret < 0)
+            goto out;
+        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
+        if (ret < 0)
+            goto out;
+
+        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+         * of zero */
+        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+
+    }
     // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
     //                           &threads[i].cache_info_arr);
     // if (ret < 0)
@@ -523,10 +500,11 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     topo_info->cores_cnt      = cores_cnt;
     topo_info->sockets_cnt    = sockets_cnt;
     topo_info->numa_nodes_cnt = numa_nodes_cnt;
-    topo_info->threads    = threads;
-    topo_info->cores      = cores;
-    topo_info->sockets    = sockets;
-    topo_info->numa_nodes = numa_nodes;
+    topo_info->threads              = threads;
+    topo_info->cores                = cores;
+    topo_info->sockets              = sockets;
+    topo_info->numa_nodes           = numa_nodes;
+    topo_info->numa_distance_matrix = distances;
     return 0;
 
 out:

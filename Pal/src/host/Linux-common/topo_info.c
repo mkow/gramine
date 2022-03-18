@@ -413,7 +413,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
-    size_t cores_cnt = 0;
+    size_t nodes_cnt = 0;
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
     size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
     if (!threads || !cores || !sockets || !numa_nodes || !distances) {
@@ -445,7 +445,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             /* no information is available for offline threads */
             continue;
 
-        if (threads[i].core_id == -1) {
+        if (threads[i].core_id == (size_t)-1) {
             // insert new core to the list
             snprintf(path, sizeof(path),
                      "/sys/devices/system/cpu/cpu%zu/topology/thread_siblings_list", i); // includes ourselves
@@ -461,7 +461,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             continue;
 
         size_t core_id = threads[i].core_id;
-        if (cores[core_id].socket_id == -1) {
+        if (cores[core_id].socket_id == (size_t)-1) {
             // insert new socket to the list
             snprintf(path, sizeof(path),
                      "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", i);

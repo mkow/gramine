@@ -155,7 +155,11 @@ int proc_cpuinfo_load(struct shim_dentry* dent, char** out_data, size_t* out_siz
         ADD_INFO("model name\t: %s\n",   ci->cpu_brand);
         ADD_INFO("stepping\t: %lu\n",    ci->cpu_stepping);
         ADD_INFO("physical id\t: %zu\n", core->socket_id);
+
+        /* Linux keeps this numbering cpu-local, but we can use a different one, and it's documented
+         * as "hardware platform's identifier (rather than the kernel's)" anyways. */
         ADD_INFO("core id\t\t: %lu\n",   thread->core_id);
+
         size_t cores_in_socket = 0;
         for (size_t j = 0; j < ti->cores_cnt; j++) // slow, but shouldn't matter
             if (ti->cores[j].socket_id == core->socket_id)

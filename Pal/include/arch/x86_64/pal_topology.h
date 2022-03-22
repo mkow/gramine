@@ -25,7 +25,8 @@
 /* Max SMT siblings currently supported on x86 processors */
 #define MAX_HYPERTHREADS_PER_CORE 4
 
-#define MAX_CACHE_LEVELS          3
+/* Max number of caches (such as L1i, L1d, L2, etc.) supported. */
+#define MAX_CACHES 4
 
 enum {
     HUGEPAGES_2M = 0,
@@ -39,8 +40,9 @@ enum cache_type {
     CACHE_TYPE_UNIFIED,
 };
 
-struct pal_core_cache_info {
-    // struct bitmap shared_cpus; // excludes offline CPUs, includes itself
+struct pal_cache_info {
+    size_t thread_id;
+
     size_t level;
     enum cache_type type;
     size_t size;
@@ -54,9 +56,6 @@ struct pal_cpu_thread_info {
     /* Everything below is valid only if the core is online! */
 
     size_t core_id; // containing core; index into pal_topo_info::cores
-
-    // TODO: extract
-    // struct pal_core_cache_info* cache_info_arr;
 };
 
 // TODO: move info from struct pal_cpu_info to here
@@ -82,6 +81,9 @@ struct pal_numa_node_info {
 };
 
 struct pal_topo_info {
+    size_t caches_cnt;
+    struct pal_cache_info* caches;
+
     size_t threads_cnt;
     struct pal_cpu_thread_info* threads;
 

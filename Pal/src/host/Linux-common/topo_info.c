@@ -409,13 +409,15 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     //     return ret;
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
+    size_t caches_cnt = 0;
+    struct pal_cache_info* caches = malloc(threads_cnt * sizeof(*caches) * MAX_CACHES); // overapproximate the count
     size_t cores_cnt = 0;
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
     size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
-    if (!threads || !cores || !sockets || !numa_nodes || !distances) {
+    if (!threads || !caches || !cores || !sockets || !numa_nodes || !distances) {
         ret = -ENOMEM;
         goto out;
     }
@@ -488,17 +490,42 @@ int get_topology_info(struct pal_topo_info* topo_info) {
          * of zero */
         numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
-
+        // TODO: where are the others set?
     }
+
+    size_t (*thread_to_cache)[MAX_CACHES];
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            continue;
+
+        for (size_t lvl = 0; lvl < MAX_CACHES; lvl++) {
+            size_t core_id = threads[i].core_id;
+            if (cores[core_id].socket_id == (size_t)-1) {
+                // insert new cache to the list
+                snprintf(path, sizeof(path),
+                         "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", i);
+                ret = iterate_ranges_from_file3(path, set_socket_id, threads, cores, &sockets_cnt);
+                if (ret < 0)
+                    goto out;
+                caches_cnt++;
+            }
+        }
+    }    
+
     // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
     //                           &threads[i].cache_info_arr);
     // if (ret < 0)
     //     goto out;
 
+    /* TODO: add realloc to save memory after we know the final sizes of all the buffers (after we
+     * implement realloc()). */
+
+    topo_info->caches_cnt     = caches_cnt;
     topo_info->threads_cnt    = threads_cnt;
     topo_info->cores_cnt      = cores_cnt;
     topo_info->sockets_cnt    = sockets_cnt;
     topo_info->numa_nodes_cnt = nodes_cnt;
+    topo_info->caches               = caches;
     topo_info->threads              = threads;
     topo_info->cores                = cores;
     topo_info->sockets              = sockets;
@@ -507,9 +534,11 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     return 0;
 
 out:
+    free(caches);
     free(threads);
     free(cores);
     free(sockets);
     free(numa_nodes);
+    free(distances);
     return ret;
 }

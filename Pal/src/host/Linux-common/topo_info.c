@@ -411,13 +411,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
     struct pal_cache_info* caches = malloc(threads_cnt * sizeof(*caches) * MAX_CACHES); // overapproximate the count
+    size_t (*thread_to_cache)[MAX_CACHES] = malloc(sizeof(size_t) * threads * MAX_CACHES);
     size_t cores_cnt = 0;
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
     size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
-    if (!threads || !caches || !cores || !sockets || !numa_nodes || !distances) {
+    if (!threads || !caches || !thread_to_cache || !cores || !sockets || !numa_nodes || !distances) {
         ret = -ENOMEM;
         goto out;
     }
@@ -493,7 +494,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         // TODO: where are the others set?
     }
 
-    size_t (*thread_to_cache)[MAX_CACHES];
     for (size_t i = 0; i < threads_cnt; i++) {
         if (!threads[i].is_online)
             continue;
@@ -531,10 +531,12 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     topo_info->sockets              = sockets;
     topo_info->numa_nodes           = numa_nodes;
     topo_info->numa_distance_matrix = distances;
+    free(thread_to_cache);
     return 0;
 
 out:
     free(caches);
+    free(thread_to_cache);
     free(threads);
     free(cores);
     free(sockets);

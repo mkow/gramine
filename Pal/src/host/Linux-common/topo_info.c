@@ -419,6 +419,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         for (size_t j = 0; j < MAX_CACHES; j++) {
             // thread_to_cache[i][j] = (size_t)-1;
             threads[i].caches_ids[j] = (size_t)-1;
+        }
     }
     for (size_t i = 0; i < nodes_cnt; i++)
         numa_nodes[i].is_online = false;
@@ -509,7 +510,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
                 caches_cnt++;
             }
         }
-    }    
+    }
 
     // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
     //                           &threads[i].cache_info_arr);

@@ -261,97 +261,72 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
 //     return bitmap_set(bitmap, pos);
 // }
 
-// static int get_cache_topo_info(size_t cache_indices_cnt, size_t core_idx,
-//                                struct pal_core_cache_info** out_cache_info_arr) {
-//     int ret;
+static int read_cache_info(struct pal_cache_info* ci, size_t thread_idx, size_t cache_idx) {
+    int ret;
 
-//     struct pal_core_cache_info* cache_info_arr =
-//         malloc(cache_indices_cnt * sizeof(*cache_info_arr));
-//     if (!cache_info_arr) {
-//         return -ENOMEM;
-//     }
+    char path[PAL_SYSFS_PATH_SIZE];
 
-//     char dirname[PAL_SYSFS_PATH_SIZE];
-//     char filename[PAL_SYSFS_PATH_SIZE];
-//     for (size_t cache_idx = 0; cache_idx < cache_indices_cnt; cache_idx++) {
-//         struct pal_core_cache_info* ci = &cache_info_arr[cache_idx];
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/level", thread_idx, cache_idx);
+    if (ret < 0)
+        goto out;
+    ret = get_hw_resource_value(path, &ci->level);
+    if (ret < 0)
+        goto out;
 
-//         ret = snprintf(dirname, sizeof(dirname), "/sys/devices/system/cpu/cpu%zu/cache/index%zu",
-//                        core_idx, cache_idx);
-//         if (ret < 0)
-//             goto fail;
+    char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/type", thread_idx, cache_idx);
+    if (ret < 0)
+        goto out;
+    ret = read_file_buffer(path, type, sizeof(type) - 1);
+    if (ret < 0)
+        goto out;
+    type[ret] = '\0';
 
-//         ret = snprintf(filename, sizeof(filename), "%s/shared_cpu_list", dirname);
-//         if (ret < 0)
-//             goto fail;
+    if (!strcmp(type, "Unified\n")) {
+       ci->type = CACHE_TYPE_UNIFIED;
+    } else if (!strcmp(type, "Instruction\n")) {
+       ci->type = CACHE_TYPE_INSTRUCTION;
+    } else if (!strcmp(type, "Data\n")) {
+       ci->type = CACHE_TYPE_DATA;
+    } else {
+        ret = -EINVAL;
+        goto out;
+    }
 
-//         bitmap_init(&ci->shared_cpus);
-//         ret = iterate_ranges_from_file(filename, set_bit_in_bitmap, &ci->shared_cpus);
-//         if (ret < 0)
-//             goto fail;
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/size", thread_idx, cache_idx);
+    if (ret < 0)
+        goto out;
+    ret = get_hw_resource_value(path, &ci->size);
+    if (ret < 0)
+        goto out;
 
-//         ret = snprintf(filename, sizeof(filename), "%s/level", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = get_hw_resource_value(filename, &ci->level);
-//         if (ret < 0)
-//             goto fail;
+    ret = snprintf(path, sizeof(path), "%s/coherency_line_size", dirname);
+    if (ret < 0)
+        goto out;
+    ret = get_hw_resource_value(path, &ci->coherency_line_size);
+    if (ret < 0)
+        goto out;
 
-//         char type[PAL_SYSFS_BUF_FILESZ] = {'\0'};
-//         ret = snprintf(filename, sizeof(filename), "%s/type", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = read_file_buffer(filename, type, sizeof(type) - 1);
-//         if (ret < 0)
-//             goto fail;
-//         type[ret] = '\0';
+    ret = snprintf(path, sizeof(path), "%s/number_of_sets", dirname);
+    if (ret < 0)
+        goto out;
+    ret = get_hw_resource_value(path, &ci->number_of_sets);
+    if (ret < 0)
+        goto out;
 
-//         if (!strcmp(type, "Unified\n")) {
-//            ci->type = CACHE_TYPE_UNIFIED;
-//         } else if (!strcmp(type, "Instruction\n")) {
-//            ci->type = CACHE_TYPE_INSTRUCTION;
-//         } else if (!strcmp(type, "Data\n")) {
-//            ci->type = CACHE_TYPE_DATA;
-//         } else {
-//             ret = -EINVAL;
-//             goto fail;
-//         }
+    ret = snprintf(path, sizeof(path), "%s/physical_line_partition", dirname);
+    if (ret < 0)
+        goto out;
+    ret = get_hw_resource_value(path, &ci->physical_line_partition);
+    if (ret < 0)
+        goto out;
 
-//         ret = snprintf(filename, sizeof(filename), "%s/size", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = get_hw_resource_value(filename, &ci->size);
-//         if (ret < 0)
-//             goto fail;
-
-//         ret = snprintf(filename, sizeof(filename), "%s/coherency_line_size", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = get_hw_resource_value(filename, &ci->coherency_line_size);
-//         if (ret < 0)
-//             goto fail;
-
-//         ret = snprintf(filename, sizeof(filename), "%s/number_of_sets", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = get_hw_resource_value(filename, &ci->number_of_sets);
-//         if (ret < 0)
-//             goto fail;
-
-//         ret = snprintf(filename, sizeof(filename), "%s/physical_line_partition", dirname);
-//         if (ret < 0)
-//             goto fail;
-//         ret = get_hw_resource_value(filename, &ci->physical_line_partition);
-//         if (ret < 0)
-//             goto fail;
-//     }
-//     *out_cache_info_arr = cache_info_arr;
-//     return 0;
-
-// fail:
-//     free(cache_info_arr);
-//     return ret;
-// }
+out:
+    return ret;
+}
 
 static int get_ranges_end(size_t ind, void* _arg) {
     *(size_t*)_arg = ind + 1;
@@ -385,6 +360,14 @@ static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
     return 0;
 }
 
+static int set_cache_id(size_t ind, void* _threads, void* _cache_ind, void* _id) {
+    struct pal_cpu_thread_info* threads = _threads;
+    size_t cache_ind = *(size_t*)_cache_ind;
+    size_t id = *(size_t*)_id;
+    threads[ind].caches_ids[cache_ind] = id;
+    return 0;
+}
+
 static int set_node_id(size_t ind, void* _threads, void* _cores, void* _sockets, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
@@ -411,7 +394,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
     struct pal_cache_info* caches = malloc(threads_cnt * sizeof(*caches) * MAX_CACHES); // overapproximate the count
-    size_t (*thread_to_cache)[MAX_CACHES] = malloc(sizeof(size_t) * threads * MAX_CACHES);
+    size_t (*thread_to_cache)[MAX_CACHES] = malloc(sizeof(size_t) * threads_cnt * MAX_CACHES);
     size_t cores_cnt = 0;
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
@@ -424,10 +407,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
+        sockets[i].node_id = -1;
+        cores[i].socket_id = -1;
         threads[i].is_online = false;
         threads[i].core_id = -1;
-        cores[i].socket_id = -1;
-        sockets[i].node_id = -1;
+        // threads[i].caches_cnt = 0;
+        for (size_t j = 0; j < MAX_CACHES; j++) {
+            // thread_to_cache[i][j] = (size_t)-1;
+            threads[i].caches_ids[j] = (size_t)-1;
     }
     for (size_t i = 0; i < nodes_cnt; i++)
         numa_nodes[i].is_online = false;
@@ -498,13 +485,21 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (!threads[i].is_online)
             continue;
 
-        for (size_t lvl = 0; lvl < MAX_CACHES; lvl++) {
-            size_t core_id = threads[i].core_id;
-            if (cores[core_id].socket_id == (size_t)-1) {
+        for (size_t j = 0; j < MAX_CACHES; j++) {
+            if (threads[i].caches_ids[j] == (size_t)-1) {
                 // insert new cache to the list
+                threads[i].caches_ids[j] = caches_cnt;
+                // `shared_cpu_map` lists threads sharing this very cache. All sharing is
+                // between caches on the same cache level.
                 snprintf(path, sizeof(path),
-                         "/sys/devices/system/cpu/cpu%zu/topology/core_siblings_list", i);
-                ret = iterate_ranges_from_file3(path, set_socket_id, threads, cores, &sockets_cnt);
+                         "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", i, j);
+                ret = iterate_ranges_from_file3(path, set_cache_id, threads, &j, &caches_cnt);
+                if (ret < 0)
+                    goto out;
+                // caches[caches_cnt].thread_id = 
+                // threads[i].caches_cnt++;
+                // TODO: caches[caches_cnt] <- sysfs
+                ret = read_cache_info(&caches[caches_cnt], i, j);
                 if (ret < 0)
                     goto out;
                 caches_cnt++;

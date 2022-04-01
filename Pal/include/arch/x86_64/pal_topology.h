@@ -41,8 +41,6 @@ enum cache_type {
 };
 
 struct pal_cache_info {
-    size_t thread_id;
-
     size_t level;
     enum cache_type type;
     size_t size;
@@ -56,6 +54,8 @@ struct pal_cpu_thread_info {
     /* Everything below is valid only if the core is online! */
 
     size_t core_id; // containing core; index into pal_topo_info::cores
+    // size_t caches_cnt; // TODO: is this needed/useful?
+    size_t caches_ids[MAX_CACHES]; // indices into pal_topo_info::caches
 };
 
 // TODO: move info from struct pal_cpu_info to here

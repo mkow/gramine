@@ -303,21 +303,27 @@ static int read_cache_info(struct pal_cache_info* ci, size_t thread_idx, size_t 
     if (ret < 0)
         goto out;
 
-    ret = snprintf(path, sizeof(path), "%s/coherency_line_size", dirname);
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/coherency_line_size",
+                   thread_idx, cache_idx);
     if (ret < 0)
         goto out;
     ret = get_hw_resource_value(path, &ci->coherency_line_size);
     if (ret < 0)
         goto out;
 
-    ret = snprintf(path, sizeof(path), "%s/number_of_sets", dirname);
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/number_of_sets",
+                   thread_idx, cache_idx);
     if (ret < 0)
         goto out;
     ret = get_hw_resource_value(path, &ci->number_of_sets);
     if (ret < 0)
         goto out;
 
-    ret = snprintf(path, sizeof(path), "%s/physical_line_partition", dirname);
+    ret = snprintf(path, sizeof(path),
+                   "/sys/devices/system/cpu/cpu%zu/cache/index%zu/physical_line_partition",
+                   thread_idx, cache_idx);
     if (ret < 0)
         goto out;
     ret = get_hw_resource_value(path, &ci->physical_line_partition);

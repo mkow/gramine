@@ -19,34 +19,32 @@
 
 /* Opens a pseudo-file describing HW resources and simply reads the value stored in the file.
  * Returns UNIX error code on failure and 0 on success. */
-// static int get_hw_resource_value(const char* filename, size_t* out_value) {
-//     assert(out_value);
+static int get_hw_resource_value(const char* filename, size_t* out_value) {
+    char str[PAL_SYSFS_BUF_FILESZ];
+    int ret = read_file_buffer(filename, str, sizeof(str) - 1);
+    if (ret < 0)
+        return ret;
 
-//     char str[PAL_SYSFS_BUF_FILESZ];
-//     int ret = read_file_buffer(filename, str, sizeof(str) - 1);
-//     if (ret < 0)
-//         return ret;
+    str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
 
-//     str[ret] = '\0'; /* ensure null-terminated buf even in partial read */
+    char* end;
+    long val = strtol(str, &end, 10);
+    if (val < 0)
+        return -EINVAL;
 
-//     char* end;
-//     long val = strtol(str, &end, 10);
-//     if (val < 0)
-//         return -EINVAL;
+    if (*end != '\n' && *end != '\0' && *end != 'K') {
+        /* Illegal character found */
+        return -EINVAL;
+    }
 
-//     if (*end != '\n' && *end != '\0' && *end != 'K') {
-//         /* Illegal character found */
-//         return -EINVAL;
-//     }
+    if (*end == 'K') {
+        if (__builtin_mul_overflow(val, 1024, &val))
+            return -EOVERFLOW;
+    }
 
-//     if (*end == 'K') {
-//         if (__builtin_mul_overflow(val, 1024, &val))
-//             return -EOVERFLOW;
-//     }
-
-//     *out_value = val;
-//     return 0;
-// }
+    *out_value = val;
+    return 0;
+}
 
 static int read_numbers_from_file(const char* path, size_t* out_arr, size_t count) {
     char str[PAL_SYSFS_BUF_FILESZ];

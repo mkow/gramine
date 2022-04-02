@@ -358,6 +358,8 @@ static int set_core_id(size_t ind, void* _threads, void* _id) {
 
 static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    if (!threads[ind].is_online)
+        return 0;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
     size_t id = *(size_t*)_id;
     cores[threads[ind].core_id].socket_id = id;
@@ -366,6 +368,8 @@ static int set_socket_id(size_t ind, void* _threads, void* _cores, void* _id) {
 
 static int set_cache_id(size_t ind, void* _threads, void* _cache_ind, void* _id) {
     struct pal_cpu_thread_info* threads = _threads;
+    if (!threads[ind].is_online)
+        return 0;
     size_t cache_ind = *(size_t*)_cache_ind;
     size_t id = *(size_t*)_id;
     threads[ind].caches_ids[cache_ind] = id;
@@ -374,6 +378,8 @@ static int set_cache_id(size_t ind, void* _threads, void* _cache_ind, void* _id)
 
 static int set_node_id(size_t ind, void* _threads, void* _cores, void* _sockets, void* _id) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
+    if (!threads[ind].is_online)
+        return 0;
     struct pal_cpu_core_info* cores = (struct pal_cpu_core_info*)_cores;
     struct pal_socket_info* sockets = (struct pal_socket_info*)_sockets;
     size_t id = *(size_t*)_id;
@@ -512,6 +518,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
+    for (size_t i = 0; i < threads_cnt; i++) {
+        if (!threads[i].is_online)
+            continue;
+
+        for (size_t j = 0; j < MAX_CACHES; j++) {
+            log_always("XXX: thr: %zu, lvl: %zu: %zu", i, j, threads[i].caches_ids[j]);
+        }
+    }
     // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
     //                           &threads[i].cache_info_arr);
     // if (ret < 0)

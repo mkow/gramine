@@ -22,8 +22,8 @@ struct callback_arg {
 
 static bool is_same_cache(size_t pos, const void* _callback_arg) {
     const struct callback_arg* callback_arg = _callback_arg;
-    struct pal_cpu_thread_info* ti = &g_pal_public_state->topo_info.threads[pos];
-    return ti->caches_ids[callback_arg->cache_idx] == callback_arg.cache_id;
+    const struct pal_cpu_thread_info* ti = &g_pal_public_state->topo_info.threads[pos];
+    return ti->caches_ids[callback_arg->cache_idx] == callback_arg->cache_id;
 }
 
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {

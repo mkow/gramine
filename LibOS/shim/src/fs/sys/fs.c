@@ -84,7 +84,7 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* parent_name = parent->name;
     size_t total;
     const char* prefix;
-    struct pal_topo_info* ti = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* ti = &g_pal_public_state->topo_info;
 
     if (strcmp(parent_name, "node") == 0) {
         total = ti->numa_nodes_cnt;

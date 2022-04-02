@@ -41,15 +41,15 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
 
     const char* name = dent->name;
 
-    struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
+    const struct pal_topo_info* topo_info = &g_pal_public_state->topo_info;
     size_t cache_id = topo_info->threads[thread_idx].caches_ids[cache_idx];
-    struct pal_cache_info* cache_info = &topo_info->caches[cache_id];
+    const struct pal_cache_info* cache_info = &topo_info->caches[cache_id];
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "shared_cpu_map") == 0) {
         struct callback_arg callback_arg = {
             .cache_id = cache_id,
             .cache_idx = cache_idx,
-        }
+        };
         ret = sys_print_as_bitmask(str, sizeof(str), topo_info->threads_cnt,
                                    is_same_cache, &callback_arg);
     } else if (strcmp(name, "level") == 0) {

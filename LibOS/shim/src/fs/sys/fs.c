@@ -97,8 +97,8 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
         /* Find the largest cache index used. */
         for (size_t i = 0; i < ti->threads_cnt; i++) {
             for (size_t j = 0; j < MAX_CACHES; j++) {
-                if (ti->threads[i].caches_ids[j] != -1)
-                    total = max(total, j);
+                if (ti->threads[i].caches_ids[j] != (size_t)-1)
+                    total = MAX(total, j);
             }
         }
         prefix = "index";

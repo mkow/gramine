@@ -16,14 +16,14 @@
 #include "shim_fs_pseudo.h"
 
 struct callback_arg {
-    size_t cache_id;
+    size_t cache_id_to_match;
     size_t cache_idx;
 };
 
 static bool is_same_cache(size_t pos, const void* _callback_arg) {
     const struct callback_arg* callback_arg = _callback_arg;
     const struct pal_cpu_thread_info* ti = &g_pal_public_state->topo_info.threads[pos];
-    return ti->caches_ids[callback_arg->cache_idx] == callback_arg->cache_id;
+    return ti->caches_ids[callback_arg->cache_idx] == callback_arg->cache_id_to_match;
 }
 
 int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) {
@@ -47,7 +47,7 @@ int sys_cache_load(struct shim_dentry* dent, char** out_data, size_t* out_size) 
     char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
     if (strcmp(name, "shared_cpu_map") == 0) {
         struct callback_arg callback_arg = {
-            .cache_id = cache_id,
+            .cache_id_to_match = cache_id,
             .cache_idx = cache_idx,
         };
         ret = sys_print_as_bitmask(str, sizeof(str), topo_info->threads_cnt,

@@ -98,9 +98,10 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
         for (size_t i = 0; i < ti->threads_cnt; i++) {
             for (size_t j = 0; j < MAX_CACHES; j++) {
                 if (ti->threads[i].caches_ids[j] != (size_t)-1)
-                    total = MAX(total, j) + 1;
+                    total = MAX(total, j);
             }
         }
+        total++; // convert max index to elements count
         prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);

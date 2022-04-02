@@ -499,11 +499,11 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         for (size_t j = 0; j < MAX_CACHES; j++) {
             if (threads[i].caches_ids[j] == (size_t)-1) {
                 // insert new cache to the list
-                threads[i].caches_ids[j] = caches_cnt;
+                // threads[i].caches_ids[j] = caches_cnt;
                 // `shared_cpu_map` lists threads sharing this very cache. All sharing is
                 // between caches on the same cache level.
                 snprintf(path, sizeof(path),
-                         "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_map", i, j);
+                         "/sys/devices/system/cpu/cpu%zu/cache/index%zu/shared_cpu_list", i, j);
                 ret = iterate_ranges_from_file3(path, set_cache_id, threads, &j, &caches_cnt);
                 if (ret < 0)
                     goto out;

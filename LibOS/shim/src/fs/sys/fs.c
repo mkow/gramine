@@ -84,16 +84,24 @@ static int sys_resource(struct shim_dentry* parent, const char* name, unsigned i
     const char* parent_name = parent->name;
     size_t total;
     const char* prefix;
+    struct pal_topo_info* ti = &g_pal_public_state->topo_info;
 
     if (strcmp(parent_name, "node") == 0) {
-        total = g_pal_public_state->topo_info.numa_nodes_cnt;
+        total = ti->numa_nodes_cnt;
         prefix = "node";
     } else if (strcmp(parent_name, "cpu") == 0) {
-        total = g_pal_public_state->topo_info.threads_cnt;
+        total = ti->threads_cnt;
         prefix = "cpu";
-    // } else if (strcmp(parent_name, "cache") == 0) {
-    //     total = g_pal_public_state->topo_info.cache_indices_cnt;
-    //     prefix = "index";
+    } else if (strcmp(parent_name, "cache") == 0) {
+        total = 0;
+        /* Find the largest cache index used. */
+        for (size_t i = 0; i < ti->threads_cnt; i++) {
+            for (size_t j = 0; j < MAX_CACHES; j++) {
+                if (ti->threads[i].caches_ids[j] != -1)
+                    total = max(total, j);
+            }
+        }
+        prefix = "index";
     } else {
         log_debug("unrecognized resource: %s", parent_name);
         return -ENOENT;

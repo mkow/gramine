@@ -518,14 +518,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < threads_cnt; i++) {
-        if (!threads[i].is_online)
-            continue;
+    // for (size_t i = 0; i < threads_cnt; i++) {
+    //     if (!threads[i].is_online)
+    //         continue;
 
-        for (size_t j = 0; j < MAX_CACHES; j++) {
-            log_always("XXX: thr: %zu, lvl: %zu: %zu", i, j, threads[i].caches_ids[j]);
-        }
-    }
+    //     for (size_t j = 0; j < MAX_CACHES; j++) {
+    //         log_always("XXX: thr: %zu, lvl: %zu: %zu", i, j, threads[i].caches_ids[j]);
+    //     }
+    // }
     // ret = get_cache_topo_info(topo_info->cache_indices_cnt, i,
     //                           &threads[i].cache_info_arr);
     // if (ret < 0)

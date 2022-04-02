@@ -184,6 +184,9 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
 
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
 
+    size_t caches_cnt = shallow_topo_info.caches_cnt;
+    topo_info->caches_cnt = caches_cnt;
+
     size_t threads_cnt = shallow_topo_info.threads_cnt;
     topo_info->threads_cnt = threads_cnt;
 
@@ -202,6 +205,7 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
     //     return -1;
     // }
 
+    struct pal_cache_info*      caches     = sgx_import_array_to_enclave(shallow_topo_info.caches,     sizeof(*caches),     caches_cnt);
     struct pal_cpu_thread_info* threads    = sgx_import_array_to_enclave(shallow_topo_info.threads,    sizeof(*threads),    threads_cnt);
     struct pal_cpu_core_info*   cores      = sgx_import_array_to_enclave(shallow_topo_info.cores,      sizeof(*cores),      cores_cnt);
     struct pal_socket_info*     sockets    = sgx_import_array_to_enclave(shallow_topo_info.sockets,    sizeof(*sockets),    sockets_cnt);
@@ -211,13 +215,14 @@ static int import_and_sanitize_topo_info(struct pal_topo_info* uptr_topo_info) {
                                                       sizeof(*distances),
                                                       numa_nodes_cnt,
                                                       numa_nodes_cnt);
+    topo_info->caches = caches;
     topo_info->threads = threads;
     topo_info->cores = cores;
     topo_info->sockets = sockets;
     topo_info->numa_nodes = numa_nodes;
     topo_info->numa_distance_matrix = distances;
 
-    if (!threads || !cores || !sockets || !numa_nodes || !distances) {
+    if (!caches || !threads || !cores || !sockets || !numa_nodes || !distances) {
         return -1;
     }
 

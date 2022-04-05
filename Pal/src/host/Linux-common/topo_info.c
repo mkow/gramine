@@ -209,56 +209,6 @@ ssize_t read_file_buffer(const char* filename, char* buf, size_t count) {
         buf[ret] = '\0';                                                         \
     })
 
-/* This function stores the number of cache levels present on the system by counting "indexX" dir
- * entries under `/sys/devices/system/cpu/cpuX/cache` in `out_cache_indices_cnt`. Returns 0 on
- * success and negative UNIX error code on failure. */
-// static int get_cache_levels_cnt(const char* path, size_t* out_cache_indices_cnt) {
-//     assert(out_cache_indices_cnt);
-
-//     char buf[1024];
-//     int ret;
-//     size_t dirs_cnt = 0;
-
-//     int fd = DO_SYSCALL(open, path, O_RDONLY | O_DIRECTORY);
-//     if (fd < 0)
-//         return fd;
-
-//     while (true) {
-//         int nread = DO_SYSCALL(getdents64, fd, buf, 1024);
-//         if (nread < 0) {
-//             ret = nread;
-//             goto out;
-//         }
-
-//         if (nread == 0)
-//             break;
-
-//         for (int bpos = 0; bpos < nread;) {
-//             struct linux_dirent64* dirent64 = (struct linux_dirent64*)(buf + bpos);
-//             if (dirent64->d_type == DT_DIR && strstartswith(dirent64->d_name, "index"))
-//                 dirs_cnt++;
-//             bpos += dirent64->d_reclen;
-//         }
-//     }
-
-//     if (!dirs_cnt) {
-//         ret = -ENOENT;
-//         goto out;
-//     }
-
-//     *out_cache_indices_cnt = dirs_cnt;
-//     ret = 0;
-
-// out:
-//     DO_SYSCALL(close, fd);
-//     return ret;
-// }
-
-// static int set_bit_in_bitmap(size_t pos, void* _bitmap) {
-//     struct bitmap* bitmap = (struct bitmap*)_bitmap;
-//     return bitmap_set(bitmap, pos);
-// }
-
 static int read_cache_info(struct pal_cache_info* ci, size_t thread_idx, size_t cache_idx) {
     int ret;
 
@@ -396,10 +346,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
     if (ret < 0)
         return ret;
-
-    // ret = get_cache_levels_cnt("/sys/devices/system/cpu/cpu0/cache", &topo_info->cache_indices_cnt);
-    // if (ret < 0)
-    //     return ret;
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;

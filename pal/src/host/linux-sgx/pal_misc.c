@@ -189,6 +189,9 @@ static inline uint32_t extension_enabled(uint32_t xfrm, uint32_t bit_idx) {
 static void sanitize_cpuid(uint32_t leaf, uint32_t subleaf, uint32_t values[4]) {
     uint64_t xfrm = g_pal_linuxsgx_state.enclave_info.attributes.xfrm;
 
+    // if (leaf == 1) {
+    //     values[CPUID_WORD_ECX] &= ~0x02000000;
+    // }
     if (leaf == CPU_VENDOR_LEAF) {
         /* hardcode the only possible values for SGX PAL */
         values[CPUID_WORD_EBX] = 0x756e6547; /* 'Genu' */

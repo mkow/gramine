@@ -153,6 +153,11 @@ static void test_cpuid_leaf_not_recognized(void) {
 }
 
 int main(int argc, char** argv, char** envp) {
+    struct regs r = {0};
+
+    cpuid(1, 0, &r);
+    printf("0/ecx = 0x%08x\n", r.ecx);
+
     test_cpuid_leaf_0xd();
     test_cpuid_leaf_reserved();
     test_cpuid_leaf_not_recognized();

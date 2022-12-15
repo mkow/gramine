@@ -1,0 +1,13 @@
+diff --git a/library/aes.c b/library/aes.c
+index bf5d43212968f919327b593fc79b55731e66be95..d8c50a84df72bf267ae8d655908707cc88c4edd5 100644
+--- a/library/aes.c
++++ b/library/aes.c
+@@ -563,6 +563,8 @@ int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
+ #if defined(MBEDTLS_AESNI_C) && defined(MBEDTLS_HAVE_X86_64)
+     if( mbedtls_aesni_has_support( MBEDTLS_AESNI_AES ) )
+         return( mbedtls_aesni_setkey_enc( (unsigned char *) ctx->rk, key, keybits ) );
++    else
++        return( MBEDTLS_ERR_PLATFORM_FEATURE_UNSUPPORTED );
+ #endif
+ 
+     for( i = 0; i < ( keybits >> 5 ); i++ )

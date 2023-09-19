@@ -216,7 +216,8 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
 
     if (retval < 0) {
         if (retval != -EACCES && retval != -EAGAIN && retval != -EBADF && retval != -EINVAL &&
-                retval != -ENFILE && retval != -ENODEV && retval != -ENOMEM && retval != -EPERM) {
+                retval != -ENFILE && retval != -ENODEV && retval != -ENOMEM && retval != -EEXIST &&
+                retval != -EPERM) {
             retval = -EPERM;
         }
         sgx_reset_ustack(old_ustack);

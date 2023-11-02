@@ -201,8 +201,11 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
         }
         if (!(requested_addr >= SHARED_ADDR_MIN + SHARED_MEM_SIZE
               || requested_addr+size <= SHARED_ADDR_MIN)) {
-            log_error("nope!");
-            die_or_inf_loop();
+            // skip first, for mem reservation on init
+            if (!FIRST_TIME()) {
+                log_error("nope!");
+                die_or_inf_loop();
+            }
         }
     } else {
         requested_addr = NULL; /* for sanity */

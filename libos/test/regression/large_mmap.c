@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
@@ -6,44 +7,55 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define TEST_LENGTH  0x10000f000
-#define TEST_LENGTH2 0x8000f000
+#define SIZE ((size_t)60*1024*1024*1024) // 60 GB
+
+#define WRITE_ONCE(x, y) do { *(volatile __typeof__(x)*)&(x) = (y); } while (0)
 
 int main(void) {
-    FILE* fp = fopen("testfile", "a+");
-    if (!fp) {
-        perror("fopen");
-        return 1;
-    }
-    int rv = ftruncate(fileno(fp), TEST_LENGTH);
-    if (rv) {
-        perror("ftruncate");
-        return 1;
-    } else {
-        printf("large_mmap: ftruncate OK\n");
-    }
-
-    void* a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
+    void* a = mmap(NULL, SIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (a == MAP_FAILED) {
         perror("mmap 1");
         return 1;
     }
-    ((char*)a)[0x80000000] = 0xff;
-    printf("large_mmap: mmap 1 completed OK\n");
-
-    rv = munmap(a, TEST_LENGTH2);
-    if (rv) {
-        perror("mumap");
-        return 1;
+    while (1) {
+        for (size_t i=0; i < SIZE; i += 4096)
+            WRITE_ONCE(((uint8_t*)a)[i], i|1);
     }
+    
+    // FILE* fp = fopen("testfile", "a+");
+    // if (!fp) {
+    //     perror("fopen");
+    //     return 1;
+    // }
+    // int rv = ftruncate(fileno(fp), TEST_LENGTH);
+    // if (rv) {
+    //     perror("ftruncate");
+    //     return 1;
+    // } else {
+    //     printf("large_mmap: ftruncate OK\n");
+    // }
 
-    a = mmap(NULL, TEST_LENGTH, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
-    if (a == MAP_FAILED) {
-        perror("mmap 2");
-        return 1;
-    }
-    ((char*)a)[0x100000000] = 0xff;
-    printf("large_mmap: mmap 2 completed OK\n");
+    // void* a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
+    // if (a == MAP_FAILED) {
+    //     perror("mmap 1");
+    //     return 1;
+    // }
+    // ((char*)a)[0x80000000] = 0xff;
+    // printf("large_mmap: mmap 1 completed OK\n");
+
+    // rv = munmap(a, TEST_LENGTH2);
+    // if (rv) {
+    //     perror("mumap");
+    //     return 1;
+    // }
+
+    // a = mmap(NULL, TEST_LENGTH, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
+    // if (a == MAP_FAILED) {
+    //     perror("mmap 2");
+    //     return 1;
+    // }
+    // ((char*)a)[0x100000000] = 0xff;
+    // printf("large_mmap: mmap 2 completed OK\n");
 
 #if 0
     /* The below fork tests sending of large checkpoints: at this point, the process allocated >4GB

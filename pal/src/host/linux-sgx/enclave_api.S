@@ -20,6 +20,11 @@ sgx_report:
     # RDX = report (already set)
     movl $EREPORT, %eax
     movq %rdi, %rbx
+
+    #movq $1000000, %rcx
+    #dupa:
+    #loop dupa
+
     movq %rsi, %rcx
 
     enclu

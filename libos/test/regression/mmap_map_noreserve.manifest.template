@@ -13,10 +13,10 @@ fs.mounts = [
 ]
 
 sgx.enclave_size = "4G"
-sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '10' }}
+sgx.max_threads = 1 #{{ '1' if env.get('EDMM', '0') == '1' else '10' }}
 sgx.debug = true
-sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.edmm_enable = true #{{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.use_exinfo = true #{{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
   "file:testfile_map_noreserve",

@@ -35,12 +35,12 @@
 
 #include "common.h"
 
-#define NUM_THREADS 5
+#define NUM_THREADS 15
 #define TEST_FILE "testfile_map_noreserve"
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2  0xC000000
 #define TEST_LENGTH3     0xA000
-#define TEST_RACE_NUM_ITERATIONS 100
+#define TEST_RACE_NUM_ITERATIONS 300000
 
 static size_t g_page_size;
 

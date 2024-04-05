@@ -642,9 +642,9 @@ int init_cpuid(void) {
 int _PalAttestationReport(const void* user_report_data, size_t* user_report_data_size,
                           void* target_info, size_t* target_info_size, void* report,
                           size_t* report_size) {
-    __sgx_mem_aligned sgx_report_data_t stack_report_data = {0};
-    __sgx_mem_aligned sgx_target_info_t stack_target_info = {0};
-    __sgx_mem_aligned sgx_report_t stack_report = {0};
+    /*static*/ __sgx_mem_aligned sgx_report_data_t stack_report_data = {0};
+    /*static*/ __sgx_mem_aligned sgx_target_info_t stack_target_info = {0};
+    /*static*/ __sgx_mem_aligned sgx_report_t stack_report = {0};
 
     if (!user_report_data_size || !target_info_size || !report_size)
         return -PAL_ERROR_INVAL;
@@ -670,6 +670,10 @@ int _PalAttestationReport(const void* user_report_data, size_t* user_report_data
     memcpy(&stack_target_info, target_info, sizeof(stack_target_info));
 
     int ret = sgx_report(&stack_target_info, &stack_report_data, &stack_report);
+    // int ret;
+    // while (1) {
+    //     ret = sgx_report(&stack_target_info, &stack_report_data, &stack_report);
+    // }
     if (ret < 0) {
         /* caller already provided reasonable sizes, so just error out without updating them */
         return -PAL_ERROR_INVAL;

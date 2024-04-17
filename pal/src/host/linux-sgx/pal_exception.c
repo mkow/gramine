@@ -459,7 +459,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         if ((addr & 0xFFF) == 0xFFF) {
             log_always("--- addr = %p", (void*)addr);
             log_always("--- trusted_exit_info = %u", trusted_exit_info_);
-            log_always("--- rip  = %p", (void*)uc->rip);
+            log_always("--- rip  = %p [%02x %02x %02x %02x]", (void*)uc->rip, ((uint8_t*)uc->rip)[0], ((uint8_t*)uc->rip)[1], ((uint8_t*)uc->rip)[2], ((uint8_t*)uc->rip)[3]);
             log_always("--- rax  = %p", (void*)uc->rax);
             log_always("--- rbx  = %p", (void*)uc->rbx);
             log_always("--- rcx  = %p", (void*)uc->rcx);

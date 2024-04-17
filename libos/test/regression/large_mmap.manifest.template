@@ -12,7 +12,7 @@ fs.mounts = [
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
-sgx.enclave_size = "64G"
+sgx.enclave_size = "4G"
 sgx.debug = true
 sgx.edmm_enable = false #{{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

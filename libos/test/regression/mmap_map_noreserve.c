@@ -35,7 +35,7 @@
 
 #include "common.h"
 
-#define NUM_THREADS 15
+#define NUM_THREADS 500
 #define TEST_FILE "testfile_map_noreserve"
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2  0xC000000

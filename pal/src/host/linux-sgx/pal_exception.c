@@ -456,8 +456,6 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         /* EDMM lazy allocation */
         assert(g_mem_bkeep_get_vma_info_upcall);
 
-        pal_prot_flags_t prot_flags;
-
         if ((addr & 0xFFF) == 0xFFF) {
             log_always("--- addr = %p", (void*)addr);
             log_always("--- trusted_exit_info = %u", trusted_exit_info_);

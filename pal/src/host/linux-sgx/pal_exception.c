@@ -458,6 +458,43 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
 
         pal_prot_flags_t prot_flags;
 
+        if ((addr & 0xFFF) == 0xFFF) {
+            log_always("--- addr = %p", (void*)addr);
+            log_always("--- trusted_exit_info = %u", trusted_exit_info_);
+            log_always("--- rip  = %p", (void*)uc->rip);
+            log_always("--- rax  = %p", (void*)uc->rax);
+            log_always("--- rbx  = %p", (void*)uc->rbx);
+            log_always("--- rcx  = %p", (void*)uc->rcx);
+            log_always("--- rsp  = %p", (void*)uc->rsp);
+            log_always("--- rbp  = %p", (void*)uc->rbp);
+            log_always("--- ret1 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret2 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret3 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret4 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret5 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret6 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret7 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret8 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret9 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            uc->rbp = *((uint64_t*)uc->rbp);
+            log_always("--- ret10 = 0x%lx", *((uint64_t*)uc->rbp + 1));
+            log_always("--- err  = %lu", (uint64_t)ctx.err);
+            log_always("--- cr2  = %lu", (uint64_t)ctx.cr2);
+            log_always("--- event_num  = %lu", (uint64_t)event_num);
+
+            BUG();
+        }
+
+        pal_prot_flags_t prot_flags;
+
         if (g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) == 0) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
 

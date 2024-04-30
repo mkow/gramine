@@ -20,16 +20,10 @@ key_path = f'/tmp/pytest_debugging/key_{urandom(16).hex()}.pem'
 print(f'{key_path}')
 while True:
     print('.', end='', flush=True)
-    with open(key_path, 'wb') as pfile:
-        key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
-            key_size=SGX_RSA_KEY_SIZE, backend=_cryptography_backend)
+    key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
+        key_size=SGX_RSA_KEY_SIZE, backend=_cryptography_backend)
 
-        private_key = key.private_bytes(encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
-        pfile.write(private_key)
-    with open(key_path, 'rb') as key_file:
-        _, _, signature = sign_with_private_key(data, key)
-        # verify_signature(data, signature, key_file)
-        public_key = key.public_key()
-        signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
-        public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())
+    _, _, signature = sign_with_private_key(data, key)
+    public_key = key.public_key()
+    signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
+    public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())

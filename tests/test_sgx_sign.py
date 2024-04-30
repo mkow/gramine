@@ -6,6 +6,7 @@
 # pylint: disable=import-outside-toplevel
 
 import pytest
+from random import urandom
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -53,13 +54,21 @@ def verify_signature(data, exponent, modulus, signature, key_file, passphrase=No
 # is not installed in such case. This is also why we perform top-level import in this function.
 # pylint: disable=redefined-outer-name
 @pytest.mark.sgx
-def test_sign_from_pem_path(tmp_rsa_key):
+def test_sign_from_pem_path():
     from graminelibos.sgx_sign import sign_with_private_key_from_pem_path
 
     data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 
-    key_path = tmp_rsa_key
+    key_path = f'/tmp/key_{urandom(16).hex()}.pem'
     print(f'\n{key_path}\n')
+    with open(key_path, 'wb') as pfile:
+        key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
+            key_size=SGX_RSA_KEY_SIZE, backend=_cryptography_backend)
+
+        private_key = key.private_bytes(encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
+        pfile.write(private_key)
+
     with open(key_path, 'rb') as key_file:
         exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path)
         verify_signature(data, exponent, modulus, signature, key_file)

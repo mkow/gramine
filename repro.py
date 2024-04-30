@@ -22,6 +22,7 @@ data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 key_path = f'/tmp/pytest_debugging/key_{urandom(16).hex()}.pem'
 print(f'{key_path}')
 while True:
+    print('.', end='', flush=True)
     with open(key_path, 'wb') as pfile:
         key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
             key_size=SGX_RSA_KEY_SIZE, backend=_cryptography_backend)

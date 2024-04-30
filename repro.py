@@ -17,13 +17,13 @@ while True:
     key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
         key_size=SGX_RSA_KEY_SIZE, backend=backends.default_backend())
 
-    raw_sig, signature = sign_with_private_key(data, key)
-    public_key = key.public_key()
-    signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
-    try:
-        public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())
-    except cryptography.exceptions.InvalidSignature:
-        print()
-        print(raw_sig.hex())
-        print(signature_bytes.hex())
-        raise
+    # raw_sig, signature = sign_with_private_key(data, key)
+    # public_key = key.public_key()
+    # signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
+    # try:
+    #     public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())
+    # except cryptography.exceptions.InvalidSignature:
+    #     print()
+    #     print(raw_sig.hex())
+    #     print(signature_bytes.hex())
+    #     raise

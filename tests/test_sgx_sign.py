@@ -18,6 +18,7 @@ def tmp_rsa_key(tmpdir):
         # TODO: use `tmp_path` fixture after we drop support for distros (RHEL 8, CentOS Stream 8)
         # that have old pytest version (< 3.9.0) installed
         key_path = tmpdir.join('key.pem')
+        print(key_path)
         with open(key_path, 'wb') as pfile:
             key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
                 key_size=key_size, backend=_cryptography_backend)

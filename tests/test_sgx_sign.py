@@ -60,7 +60,7 @@ def test_sign_from_pem_path():
 
     data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 
-    key_path = f'/tmp/key_{urandom(16).hex()}.pem'
+    key_path = f'/tmp/pytest_debugging/key_{urandom(16).hex()}.pem'
     print(f'\n{key_path}\n')
     with open(key_path, 'wb') as pfile:
         key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,

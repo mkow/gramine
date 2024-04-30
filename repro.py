@@ -5,15 +5,12 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from graminelibos.sgx_sign import (sign_with_private_key_from_pem_path, SGX_RSA_KEY_SIZE, SGX_RSA_PUBLIC_EXPONENT,
     _cryptography_backend)
 
-def verify_signature(data, exponent, modulus, signature, key_file, passphrase=None):
+def verify_signature(data, signature, key_file, passphrase=None):
     private_key = serialization.load_pem_private_key(key_file.read(), password=passphrase,
         backend=_cryptography_backend)
 
     public_key = private_key.public_key()
 
-    numbers = public_key.public_numbers()
-    assert numbers.e == exponent
-    assert numbers.n == modulus
     signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
     public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())
 
@@ -31,5 +28,5 @@ while True:
             format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
         pfile.write(private_key)
     with open(key_path, 'rb') as key_file:
-        exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path)
-        verify_signature(data, exponent, modulus, signature, key_file)
+        _, _, signature = sign_with_private_key_from_pem_path(data, key_path)
+        verify_signature(data, signature, key_file)

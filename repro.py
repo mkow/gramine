@@ -23,6 +23,7 @@ while True:
     try:
         public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())
     except cryptography.exceptions.InvalidSignature:
+        print()
         print(raw_sig.hex())
         print(signature_bytes.hex())
         raise

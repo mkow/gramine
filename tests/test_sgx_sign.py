@@ -55,7 +55,8 @@ def verify_signature(data, exponent, modulus, signature, key_file, passphrase=No
 # pylint: disable=redefined-outer-name
 @pytest.mark.sgx
 def test_sign_from_pem_path():
-    from graminelibos.sgx_sign import sign_with_private_key_from_pem_path
+    from graminelibos.sgx_sign import (sign_with_private_key_from_pem_path, SGX_RSA_KEY_SIZE, SGX_RSA_PUBLIC_EXPONENT,
+        _cryptography_backend)
 
     data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 

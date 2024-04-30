@@ -3,7 +3,7 @@ from os import urandom
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from graminelibos.sgx_sign import (sign_with_private_key_from_pem_path, SGX_RSA_KEY_SIZE, SGX_RSA_PUBLIC_EXPONENT,
-    _cryptography_backend)
+    _cryptography_backend, sign_with_private_key)
 
 def verify_signature(data, signature, key_file, passphrase=None):
     private_key = serialization.load_pem_private_key(key_file.read(), password=passphrase,
@@ -28,5 +28,6 @@ while True:
             format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
         pfile.write(private_key)
     with open(key_path, 'rb') as key_file:
-        _, _, signature = sign_with_private_key_from_pem_path(data, key_path)
+        # _, _, signature = sign_with_private_key_from_pem_path(data, key_path)
+        _, _, signature = sign_with_private_key(key)
         verify_signature(data, signature, key_file)

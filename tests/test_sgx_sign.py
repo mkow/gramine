@@ -18,7 +18,6 @@ def tmp_rsa_key(tmpdir):
         # TODO: use `tmp_path` fixture after we drop support for distros (RHEL 8, CentOS Stream 8)
         # that have old pytest version (< 3.9.0) installed
         key_path = tmpdir.join('key.pem')
-        print(key_path)
         with open(key_path, 'wb') as pfile:
             key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
                 key_size=key_size, backend=_cryptography_backend)
@@ -60,6 +59,7 @@ def test_sign_from_pem_path(tmp_rsa_key):
     data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 
     key_path = tmp_rsa_key()
+    print(f'\n{key_path}\n')
     with open(key_path, 'rb') as key_file:
         exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path)
         verify_signature(data, exponent, modulus, signature, key_file)
@@ -75,6 +75,7 @@ def test_sign_from_pem_path_with_passphrase(tmp_rsa_key):
     passphrase = b'randompassphrase'
 
     key_path = tmp_rsa_key(passphrase)
+    print(f'\n{key_path}\n')
     with open(key_path, 'rb') as key_file:
         exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path,
             passphrase)

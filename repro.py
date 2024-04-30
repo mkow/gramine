@@ -29,5 +29,5 @@ while True:
         pfile.write(private_key)
     with open(key_path, 'rb') as key_file:
         # _, _, signature = sign_with_private_key_from_pem_path(data, key_path)
-        _, _, signature = sign_with_private_key(key)
+        _, _, signature = sign_with_private_key(data, key)
         verify_signature(data, signature, key_file)

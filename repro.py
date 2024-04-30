@@ -28,6 +28,8 @@ while True:
             format=serialization.PrivateFormat.PKCS8, encryption_algorithm=serialization.NoEncryption())
         pfile.write(private_key)
     with open(key_path, 'rb') as key_file:
-        # _, _, signature = sign_with_private_key_from_pem_path(data, key_path)
         _, _, signature = sign_with_private_key(data, key)
-        verify_signature(data, signature, key_file)
+        # verify_signature(data, signature, key_file)
+        public_key = key.public_key()
+        signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
+        public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())

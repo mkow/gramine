@@ -31,7 +31,7 @@ def tmp_rsa_key(tmpdir):
                 encryption_algorithm)
             pfile.write(private_key)
         return key_path
-    return gen_rsa_key
+    return gen_rsa_key()
 
 # pylint: disable=too-many-arguments
 def verify_signature(data, exponent, modulus, signature, key_file, passphrase=None):
@@ -58,7 +58,7 @@ def test_sign_from_pem_path(tmp_rsa_key):
 
     data = b'lorem ipsum dolor sit amet consectetur adipiscing elit'
 
-    key_path = tmp_rsa_key()
+    key_path = tmp_rsa_key
     print(f'\n{key_path}\n')
     with open(key_path, 'rb') as key_file:
         exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path)

@@ -34,3 +34,4 @@ with open(key_path, 'rb') as key_file:
     exponent, modulus, signature = sign_with_private_key_from_pem_path(data, key_path)
     while True:
         verify_signature(data, exponent, modulus, signature, key_file)
+        key_file.rewind()

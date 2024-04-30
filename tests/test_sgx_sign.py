@@ -6,7 +6,7 @@
 # pylint: disable=import-outside-toplevel
 
 import pytest
-from random import urandom
+from os import urandom
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa

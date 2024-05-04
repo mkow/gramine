@@ -26,8 +26,8 @@
 
 verify_measurements_cb_t g_verify_measurements_cb = NULL;
 
-static bool getenv_critical(const char* name, char** out_value) {
-    char* value = getenv(name);
+static bool getenv_critical(const char* name, const char** out_value) {
+    const char* value = getenv(name);
     if (!value) {
         ERROR("ERROR: A required environment variable %s is not set.", name);
         return false;

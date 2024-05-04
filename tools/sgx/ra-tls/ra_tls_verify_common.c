@@ -30,7 +30,7 @@ static char* getenv_critical(const char* name) {
     char* value = getenv(name);
     if (!value) {
         ERROR("ERROR: A required environment variable %s is not set.", name);
-        exit(1);
+        return ???
     }
 
     if (strcmp(value, "any") == 0) {

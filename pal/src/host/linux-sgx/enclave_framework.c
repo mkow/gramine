@@ -372,8 +372,8 @@ int sgx_verify_report(sgx_report_t* report) {
 static void hexdump_mem(const void* data, size_t size) {
     uint8_t* ptr = (uint8_t*)data;
     for (size_t i = 0; i < size; i++)
-        printf("%02x", ptr[i]);
-    printf("\n");
+        log_always("%02x", ptr[i]);
+    log_always("\n");
 }
 
 int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {

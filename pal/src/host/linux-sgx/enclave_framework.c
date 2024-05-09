@@ -369,13 +369,6 @@ int sgx_verify_report(sgx_report_t* report) {
     return 0;
 }
 
-static void hexdump_mem(const void* data, size_t size) {
-    uint8_t* ptr = (uint8_t*)data;
-    for (size_t i = 0; i < size; i++)
-        log_always("%02x", ptr[i]);
-    log_always("\n");
-}
-
 int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     assert(key_policy == SGX_KEYPOLICY_MRENCLAVE || key_policy == SGX_KEYPOLICY_MRSIGNER);
 
@@ -398,8 +391,6 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     key_request.attribute_mask.flags = g_seal_key_flags_mask;
     key_request.attribute_mask.xfrm  = g_seal_key_xfrm_mask;
     key_request.misc_mask            = g_seal_key_misc_mask;
-
-    hexdump_mem(&g_seal_key_misc_mask, sizeof(g_seal_key_misc_mask));
 
     int ret = sgx_getkey(&key_request, out_seal_key);
     if (ret) {

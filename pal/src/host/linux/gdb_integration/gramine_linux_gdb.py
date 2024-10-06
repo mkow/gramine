@@ -9,7 +9,7 @@ def main():
     common_path = '../../gdb_integration/'
     for filename in [
             common_path + 'language_gdb.py',
-            # common_path + 'pagination_gdb.py',
+            common_path + 'pagination_gdb.py',
             # common_path + 'debug_map_gdb.py',
             # common_path + 'gramine.gdb',
     ]:

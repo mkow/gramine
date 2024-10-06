@@ -468,6 +468,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_elf_objects);
     RUN_INIT(init_signal_handling);
     RUN_INIT(init_ipc_worker);
+    
+    for (volatile uint64_t x = 0; x<1000000000; x++);
 
     if (g_pal_public_state->parent_process) {
         int ret = connect_to_process(g_process_ipc_ids.parent_vmid);

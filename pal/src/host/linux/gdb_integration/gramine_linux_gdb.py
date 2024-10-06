@@ -10,8 +10,8 @@ def main():
     for filename in [
             common_path + 'language_gdb.py',
             common_path + 'pagination_gdb.py',
-            # common_path + 'debug_map_gdb.py',
-            # common_path + 'gramine.gdb',
+            common_path + 'debug_map_gdb.py',
+            common_path + 'gramine.gdb',
     ]:
         print("[%s] Loading %s..." % (os.path.basename(__file__), filename))
         path = os.path.join(os.path.dirname(__file__), filename)

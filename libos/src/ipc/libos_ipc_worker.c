@@ -271,6 +271,9 @@ static noreturn void ipc_worker_main(void) {
         log_debug("-----------------------");
         int ret = PalStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
         log_debug("PalStreamsWaitEvents returned %d (%s)", ret, pal_strerror(ret));
+        for (size_t i = 0; i < items_cnt; i++) {
+            log_debug("ret_events[%d]: 0x%04x", i, ret_events[i]);
+        }
         if (ret < 0) {
             if (ret == PAL_ERROR_INTERRUPTED) {
                 /* Generally speaking IPC worker should not be interrupted, but this happens with

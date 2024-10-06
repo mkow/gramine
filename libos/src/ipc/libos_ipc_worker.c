@@ -264,6 +264,11 @@ static noreturn void ipc_worker_main(void) {
             i++;
         }
 
+        log_debug("Waiting on %zu handles:");
+        for (size_t i = 0; i < items_cnt; i++) {
+            log_debug("%d (%d)", handles[i], HANDLE_TYPE(handles[i]));
+        }
+        log_debug("-----------------------");
         int ret = PalStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
         if (ret < 0) {
             if (ret == PAL_ERROR_INTERRUPTED) {

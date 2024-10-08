@@ -144,6 +144,8 @@ static int debug_map_find(uintptr_t addr, char** out_name, uintptr_t* out_offset
             best_name = map->name;
             best_addr = (uintptr_t)map->addr;
         }
+        if (map == map->next)
+            log_always("?????????????????");
         map = map->next;
     }
 

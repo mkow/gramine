@@ -268,6 +268,8 @@ noreturn void pal_abort(void) {
 }
 
 void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
+    malloc(30);
+    return;
 #ifdef DEBUG
     if (debug_describe_location(addr, buf, buf_size) == 0)
         return;

@@ -154,10 +154,10 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     // }
     ret = 0;
 
-out:;
-    int close_ret = DO_SYSCALL(close, fd);
-    if (close_ret < 0)
-        return close_ret;
+// out:;
+    // int close_ret = DO_SYSCALL(close, fd);
+    // if (close_ret < 0)
+    //     return close_ret;
 
     return ret;
 }

@@ -264,7 +264,7 @@ static int symbol_map_callback(const char* line, void* arg, bool* out_stop) {
 /* Example output: "func_name at source_file.c" */
 static int find_in_symbol_map(const char* name, uintptr_t offset, char* buf, size_t buf_size) {
     // char* symbol_map_name = alloc_concat(name, /*a_len=*/-1, ".map", /*b_len=*/-1);
-    malloc(30);
+    // malloc(30);
     // if (!symbol_map_name)
     //     return -ENOMEM;
 
@@ -289,10 +289,10 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     uintptr_t offset;
 
     // log_always("XXX");
-    ret = debug_map_find(addr, &name, &offset);
-    //log_always("XXX");
-    if (ret < 0)
-        return ret;
+    // ret = debug_map_find(addr, &name, &offset);
+    // //log_always("XXX");
+    // if (ret < 0)
+    //     return ret;
 
     //log_always("XXX");
     // const char* basename = name;
@@ -302,7 +302,9 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     // }
 
     //log_always("XXX");
-    ret = find_in_symbol_map(name, offset, buf, buf_size);
+    // ret = find_in_symbol_map(name, offset, buf, buf_size);
+    malloc(30);
+    
     // for (volatile int i=0; i < 100000000; i++);
     //log_always("XXX");
     // if (ret < 0) {

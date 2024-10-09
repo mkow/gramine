@@ -133,14 +133,6 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         char* line_end;
         while ((line_end = strchr(buf, '\n')) != NULL) {
             *line_end = '\0';
-            ret = callback(buf, arg, &stop);
-            if (ret < 0)
-                goto out;
-            if (stop) {
-                ret = 0;
-                goto out;
-            }
-
             /* Move remaining part of buffer to beginning (including the final null terminator) */
             len -= line_end + 1 - buf;
             memmove(buf, line_end + 1, len + 1);
@@ -153,12 +145,12 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
         }
     }
     /* Process the rest of buffer; it should not contain any newlines. */
-    if (len > 0) {
-        ret = callback(buf, arg, &stop);
-        if (ret < 0)
-            goto out;
-        /* ignore `stop`, we've finished either way */
-    }
+    // if (len > 0) {
+    //     ret = callback(buf, arg, &stop);
+    //     if (ret < 0)
+    //         goto out;
+    //     /* ignore `stop`, we've finished either way */
+    // }
     ret = 0;
 
 out:;

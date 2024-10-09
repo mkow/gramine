@@ -27,6 +27,6 @@ void _PalDebugMapRemove(void* addr) {
 }
 
 int _PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
-    // log_always("XXX");
+    log_always("XXX");
     return ocall_debug_describe_location(addr, buf, buf_size);
 }

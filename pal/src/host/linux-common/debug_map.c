@@ -289,7 +289,7 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     char* name;
     uintptr_t offset;
 
-    //log_always("XXX");
+    log_always("XXX");
     ret = debug_map_find(addr, &name, &offset);
     //log_always("XXX");
     if (ret < 0)

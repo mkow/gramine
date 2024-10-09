@@ -116,6 +116,7 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     bool stop = false;
     size_t len = 0;
     while (true) {
+        assert(len < sizeof(buf) - 1);
         ssize_t n = DO_SYSCALL(read, fd, &buf[len], sizeof(buf) - 1 - len);
         if (n == -EINTR) {
             continue;

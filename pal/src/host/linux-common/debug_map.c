@@ -284,43 +284,40 @@ static int find_in_symbol_map(const char* name, uintptr_t offset, char* buf, siz
 
 /* Example output: "func_name at source_file.c, libpal.so+0x456" */
 int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
-    // int ret;
+    int ret;
 
+    char* name;
+    uintptr_t offset;
 
-    buf[0] = 0;
-    return 0;
-    // char* name;
-    // uintptr_t offset;
+    // log_always("XXX");
+    ret = debug_map_find(addr, &name, &offset);
+    //log_always("XXX");
+    if (ret < 0)
+        return ret;
 
-    // // log_always("XXX");
-    // ret = debug_map_find(addr, &name, &offset);
-    // //log_always("XXX");
-    // if (ret < 0)
-    //     return ret;
+    //log_always("XXX");
+    const char* basename = name;
+    //log_always("XXX");
+    for (const char* s = name; *s != '\0'; s++) {
+        if (*s == '/')
+            basename = s + 1;
+    }
 
-    // //log_always("XXX");
-    // const char* basename = name;
-    // //log_always("XXX");
-    // for (const char* s = name; *s != '\0'; s++) {
-    //     if (*s == '/')
-    //         basename = s + 1;
-    // }
-
-    // //log_always("XXX");
-    // ret = find_in_symbol_map(name, offset, buf, buf_size);
-    // //log_always("XXX");
-    // if (ret < 0) {
-    //     /* parsing symbol map failed, display just name and offset */
-    //     //log_always("XXX");
-    //     snprintf(buf, buf_size, "%s+0x%lx (addr = 0x%lx)", basename, offset, addr);
-    // } else {
-    //     //log_always("XXX");
-    //     size_t len = strlen(buf);
-    //     snprintf(&buf[len], buf_size - len, ", %s+0x%lx (addr = 0x%lx)", basename, offset, addr);
-    // }
-    // //log_always("XXX");
+    //log_always("XXX");
+    ret = find_in_symbol_map(name, offset, buf, buf_size);
+    //log_always("XXX");
+    if (ret < 0) {
+        /* parsing symbol map failed, display just name and offset */
+        //log_always("XXX");
+        snprintf(buf, buf_size, "%s+0x%lx (addr = 0x%lx)", basename, offset, addr);
+    } else {
+        //log_always("XXX");
+        size_t len = strlen(buf);
+        snprintf(&buf[len], buf_size - len, ", %s+0x%lx (addr = 0x%lx)", basename, offset, addr);
+    }
+    //log_always("XXX");
 
     // free(name);
-    // //log_always("XXX");
-    // return 0;
+    //log_always("XXX");
+    return 0;
 }

@@ -288,7 +288,7 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 
 
     buf[0] = 0;
-    // return;
+    return 0;
     // char* name;
     // uintptr_t offset;
 

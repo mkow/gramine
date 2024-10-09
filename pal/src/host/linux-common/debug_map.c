@@ -264,15 +264,15 @@ static int symbol_map_callback(const char* line, void* arg, bool* out_stop) {
 /* Example output: "func_name at source_file.c" */
 static int find_in_symbol_map(const char* name, uintptr_t offset, char* buf, size_t buf_size) {
     char* symbol_map_name = alloc_concat(name, /*a_len=*/-1, ".map", /*b_len=*/-1);
-    if (!symbol_map_name)
-        return -ENOMEM;
+    // if (!symbol_map_name)
+    //     return -ENOMEM;
 
-    struct symbol_map_data data = {
-        .offset = offset,
-        .buf = buf,
-        .buf_size = buf_size,
-        .found = false,
-    };
+    // struct symbol_map_data data = {
+    //     .offset = offset,
+    //     .buf = buf,
+    //     .buf_size = buf_size,
+    //     .found = false,
+    // };
 
     // int ret = read_text_file_iter_lines(symbol_map_name, &symbol_map_callback, &data);
     // free(symbol_map_name);

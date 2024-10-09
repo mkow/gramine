@@ -107,9 +107,9 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
                               void* arg) {
     int ret;
 
-    int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
-    if (fd < 0)
-        return fd;
+    // int fd = DO_SYSCALL(open, path, O_RDONLY, 0);
+    // if (fd < 0)
+    //     return fd;
 
     // char buf[0x200];
 

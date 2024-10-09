@@ -192,72 +192,73 @@ struct symbol_map_data {
  * confusing.
  */
 static int symbol_map_callback(const char* line, void* arg, bool* out_stop) {
-    struct symbol_map_data* data = arg;
-    unsigned long val;
-    const char* next = line;
-
-    /* Start address */
-    if (str_to_ulong(next, 16, &val, &next) < 0)
-        return 0;
-    uintptr_t start = val;
-
-    if (*next != ' ')
-        return 0;
-    next++;
-
-    /* Size */
-    if (str_to_ulong(next, 16, &val, &next) < 0)
-        return 0;
-    size_t size = val;
-
-    if (*next != ' ')
-        return 0;
-    next++;
-
-    /* Skip if we're too early; stop iteration if we're too late */
-    if (start + size <= data->offset)
-        return 0;
-    if (data->offset < start) {
-        *out_stop = true;
-        return 0;
-    }
-
-    /* `t` or `T` (symbol in a text section) */
-    if (*next != 't' && *next != 'T')
-        return 0;
-    next++;
-
-    if (*next != ' ')
-        return 0;
-    next++;
-
-    /* Symbol name */
-    const char* symbol_name = next;
-    next = strchr(next, '\t');
-    if (next) {
-        size_t symbol_name_len = next - symbol_name;
-        next++;
-
-        /* File name */
-        const char* file_name = next;
-        while (*next != ':' && *next != '\0') {
-            /* Begin `file_name` after the last '/' encountered */
-            if (*next == '/')
-                file_name = next + 1;
-            next++;
-        }
-        size_t file_name_len = next - file_name;
-
-        snprintf(data->buf, data->buf_size, "%.*s at %.*s", (int)symbol_name_len, symbol_name,
-                 (int)file_name_len, file_name);
-    } else {
-        /* There's no file name, the symbol name ends with null terminator */
-        snprintf(data->buf, data->buf_size, "%s", symbol_name);
-    }
-
-    data->found = true;
-    *out_stop = true;
     return 0;
+    // struct symbol_map_data* data = arg;
+    // unsigned long val;
+    // const char* next = line;
+
+    // /* Start address */
+    // if (str_to_ulong(next, 16, &val, &next) < 0)
+    //     return 0;
+    // uintptr_t start = val;
+
+    // if (*next != ' ')
+    //     return 0;
+    // next++;
+
+    // /* Size */
+    // if (str_to_ulong(next, 16, &val, &next) < 0)
+    //     return 0;
+    // size_t size = val;
+
+    // if (*next != ' ')
+    //     return 0;
+    // next++;
+
+    // /* Skip if we're too early; stop iteration if we're too late */
+    // if (start + size <= data->offset)
+    //     return 0;
+    // if (data->offset < start) {
+    //     *out_stop = true;
+    //     return 0;
+    // }
+
+    // /* `t` or `T` (symbol in a text section) */
+    // if (*next != 't' && *next != 'T')
+    //     return 0;
+    // next++;
+
+    // if (*next != ' ')
+    //     return 0;
+    // next++;
+
+    // /* Symbol name */
+    // const char* symbol_name = next;
+    // next = strchr(next, '\t');
+    // if (next) {
+    //     size_t symbol_name_len = next - symbol_name;
+    //     next++;
+
+    //     /* File name */
+    //     const char* file_name = next;
+    //     while (*next != ':' && *next != '\0') {
+    //         /* Begin `file_name` after the last '/' encountered */
+    //         if (*next == '/')
+    //             file_name = next + 1;
+    //         next++;
+    //     }
+    //     size_t file_name_len = next - file_name;
+
+    //     snprintf(data->buf, data->buf_size, "%.*s at %.*s", (int)symbol_name_len, symbol_name,
+    //              (int)file_name_len, file_name);
+    // } else {
+    //     /* There's no file name, the symbol name ends with null terminator */
+    //     snprintf(data->buf, data->buf_size, "%s", symbol_name);
+    // }
+
+    // data->found = true;
+    // *out_stop = true;
+    // return 0;
 }
 
 /* Example output: "func_name at source_file.c" */

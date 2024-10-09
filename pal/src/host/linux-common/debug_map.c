@@ -274,7 +274,7 @@ static int find_in_symbol_map(const char* name, uintptr_t offset, char* buf, siz
     };
 
     int ret = read_text_file_iter_lines(symbol_map_name, &symbol_map_callback, &data);
-    free(symbol_map_name);
+    // free(symbol_map_name);
 
     if (ret < 0)
         return ret;

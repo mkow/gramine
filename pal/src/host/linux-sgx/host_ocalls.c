@@ -699,7 +699,8 @@ static long sgx_ocall_debug_describe_location(void* args) {
 
     static size_t cnt = 0;
     cnt++;
-    if (cnt > 3000)
+    // 300 - 3000
+    if (cnt > 1500)
         malloc(30);
     return -ENOSYS;
 // #ifdef DEBUG

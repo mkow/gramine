@@ -301,8 +301,8 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     // }
 
     //log_always("XXX");
-    // ret = find_in_symbol_map(name, offset, buf, buf_size);
-    for (volatile int i=0; i < 100000000; i++);
+    ret = find_in_symbol_map(name, offset, buf, buf_size);
+    // for (volatile int i=0; i < 100000000; i++);
     //log_always("XXX");
     // if (ret < 0) {
     //     /* parsing symbol map failed, display just name and offset */

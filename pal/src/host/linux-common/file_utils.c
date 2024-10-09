@@ -111,40 +111,40 @@ int read_text_file_iter_lines(const char* path, int (*callback)(const char* line
     if (fd < 0)
         return fd;
 
-    char buf[0x200];
+    // char buf[0x200];
 
-    bool stop = false;
-    size_t len = 0;
-    while (true) {
-        assert(len < sizeof(buf) - 1);
-        ssize_t n = DO_SYSCALL(read, fd, &buf[len], sizeof(buf) - 1 - len);
-        if (n == -EINTR) {
-            continue;
-        } else if (n < 0) {
-            ret = n;
-            goto out;
-        } else if (n == 0) {
-            /* EOF; we will process the remainder after the loop */
-            break;
-        }
-        len += n;
-        buf[len] = '\0';
+    // bool stop = false;
+    // size_t len = 0;
+    // while (true) {
+    //     assert(len < sizeof(buf) - 1);
+    //     ssize_t n = DO_SYSCALL(read, fd, &buf[len], sizeof(buf) - 1 - len);
+    //     if (n == -EINTR) {
+    //         continue;
+    //     } else if (n < 0) {
+    //         ret = n;
+    //         goto out;
+    //     } else if (n == 0) {
+    //         /* EOF; we will process the remainder after the loop */
+    //         break;
+    //     }
+    //     len += n;
+    //     buf[len] = '\0';
 
-        /* Process all finished lines that are in the buffer */
-        char* line_end;
-        while ((line_end = strchr(buf, '\n')) != NULL) {
-            *line_end = '\0';
-            /* Move remaining part of buffer to beginning (including the final null terminator) */
-            len -= line_end + 1 - buf;
-            memmove(buf, line_end + 1, len + 1);
-        }
+    //     /* Process all finished lines that are in the buffer */
+    //     char* line_end;
+    //     while ((line_end = strchr(buf, '\n')) != NULL) {
+    //         *line_end = '\0';
+    //         /* Move remaining part of buffer to beginning (including the final null terminator) */
+    //         len -= line_end + 1 - buf;
+    //         memmove(buf, line_end + 1, len + 1);
+    //     }
 
-        if (len == sizeof(buf) - 1) {
-            /* The current line might be longer than buffer. */
-            ret = -E2BIG;
-            goto out;
-        }
-    }
+    //     if (len == sizeof(buf) - 1) {
+    //         /* The current line might be longer than buffer. */
+    //         ret = -E2BIG;
+    //         goto out;
+    //     }
+    // }
     /* Process the rest of buffer; it should not contain any newlines. */
     // if (len > 0) {
     //     ret = callback(buf, arg, &stop);

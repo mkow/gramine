@@ -819,6 +819,7 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size) {
 }
 
 void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
+    return;
 #ifdef DEBUG
     if (_PalDebugDescribeLocation(addr, buf, buf_size) == 0)
         return;

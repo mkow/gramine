@@ -296,15 +296,14 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
         return ret;
 
     //log_always("XXX");
-    const char* basename = name;
-    //log_always("XXX");
-    for (const char* s = name; *s != '\0'; s++) {
-        if (*s == '/')
-            basename = s + 1;
-    }
+    // const char* basename = name;
+    // for (const char* s = name; *s != '\0'; s++) {
+    //     if (*s == '/')
+    //         basename = s + 1;
+    // }
 
     //log_always("XXX");
-    // ret = find_in_symbol_map(name, offset, buf, buf_size);
+    ret = find_in_symbol_map(name, offset, buf, buf_size);
     //log_always("XXX");
     // if (ret < 0) {
     //     /* parsing symbol map failed, display just name and offset */

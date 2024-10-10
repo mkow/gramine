@@ -707,7 +707,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
         // debug trap on assert failure
         log_always("malloc addr: %p", &malloc);
         uint8_t* addr = (uint8_t*)&malloc - 0x9a0e0 + 0x97959;
-        if (mprotect(addr & ~(uintptr_t)0xFFF, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+        if (mprotect((void*)((uintptr_t)addr & ~(uintptr_t)0xFFF), 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
             log_always("mprotect failed!");
         } else {
             addr[0] = 0xEB;

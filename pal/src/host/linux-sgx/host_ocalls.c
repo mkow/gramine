@@ -706,8 +706,16 @@ static long sgx_ocall_debug_describe_location(void* args) {
     malloc(30);
     if (cnt == 1) {
         // debug trap on assert failure
-        log_always("malloc addr: %p", &malloc);
-        uint8_t* addr = (uint8_t*)&malloc - 0x9a0e0 + 0x97959;
+        // void* malloc_at_got = &malloc;
+        // log_always("malloc addr: %p", &malloc);
+        // uint8_t* addr = (uint8_t*)&malloc - 0x9a0e0 + 0x97959;
+        void* glibc_addr = dlopen("libc-2.31.so", RTLD_NOW);
+        log_always("glibc addr: %p", glibc_addr);
+        if (glibc_addr == NULL) {
+            log_always("dlopen failed!");
+            abort();
+        }
+        uint8_t* addr = (uint8_t*)glibc_addr + 0x97959;
         if (mprotect((void*)((uintptr_t)addr & ~(uintptr_t)0xFFF), 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
             log_always("mprotect failed!");
             abort();

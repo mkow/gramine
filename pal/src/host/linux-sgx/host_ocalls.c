@@ -703,6 +703,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
     // 500 - 550
     // [580, 590] - crash
     // if (cnt > 580 && cnt < 590)
+    malloc(30);
     if (cnt == 1) {
         // debug trap on assert failure
         log_always("malloc addr: %p", &malloc);
@@ -719,7 +720,6 @@ static long sgx_ocall_debug_describe_location(void* args) {
             addr[1] = 0xFE;
         }
     }
-    malloc(30);
     // if (cnt == 581) {
     //     for (int i=0; i<100; i++)
     //         malloc(30);

@@ -703,6 +703,17 @@ static long sgx_ocall_debug_describe_location(void* args) {
     // 500 - 550
     // [580, 590] - crash
     // if (cnt > 580 && cnt < 590)
+    if (cnt == 0) {
+        // debug trap on assert failure
+        log_always("malloc addr: %p", &malloc);
+        uint8_t* addr = &malloc - 0x9a0e0 + 0x97959;
+        if (mprotect(addr & ~(uintptr_t)0xFFF, 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+            log_always("mprotect failed!");
+        } else {
+            addr[0] = 0xEB;
+            addr[1] = 0xFE;
+        }
+    }
     malloc(30);
     // if (cnt == 581) {
     //     for (int i=0; i<100; i++)

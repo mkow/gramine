@@ -723,7 +723,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
         // uint8_t* addr = (uint8_t*)glibc_addr + 0x97959;
         uint8_t* stdin_addr = (uint8_t*)stdin;
         log_always("stdin_addr addr: %p", stdin_addr);
-        uint8_t* addr = (uint8_t*)stdin_addr - 0x1ed790 + 0x97959;
+        uint8_t* addr = (uint8_t*)stdin_addr - 0x1ec980 + 0x97959;
         if (mprotect((void*)((uintptr_t)addr & ~(uintptr_t)0xFFF), 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
             log_always("mprotect failed!");
             abort();

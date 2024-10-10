@@ -1,11 +1,15 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University */
 
+#define _GNU_SOURCE
+
 #include <stddef.h> /* must be included before linux/signal.h */
 
 #include <asm/errno.h>
 #include <asm/ioctls.h>
 #include <asm/mman.h>
+#include <dlfcn.h>
+#include <sys/mman.h>
 #include <asm/poll.h>
 #include <limits.h>
 #include <linux/futex.h>

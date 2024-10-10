@@ -709,6 +709,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
         uint8_t* addr = (uint8_t*)&malloc - 0x9a0e0 + 0x97959;
         if (mprotect((void*)((uintptr_t)addr & ~(uintptr_t)0xFFF), 0x2000, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
             log_always("mprotect failed!");
+            abort();
         } else {
             addr[0] = 0xEB;
             addr[1] = 0xFE;

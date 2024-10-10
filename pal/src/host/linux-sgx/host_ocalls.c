@@ -4,6 +4,7 @@
 #define _GNU_SOURCE
 
 #include <stddef.h> /* must be included before linux/signal.h */
+#include <stdio.h>
 
 #include <asm/errno.h>
 #include <asm/ioctls.h>

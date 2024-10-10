@@ -702,7 +702,7 @@ static long sgx_ocall_debug_describe_location(void* args) {
     // crash - ok
     // 500 - 550
     // [570, 600] - crash
-    if (cnt > 570 && cnt < 585)
+    if (cnt > 570 && cnt < 590)
         malloc(30);
     return -ENOSYS;
 // #ifdef DEBUG

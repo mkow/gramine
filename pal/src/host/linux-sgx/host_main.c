@@ -7,9 +7,9 @@
  */
 
 /* TODO: remove these three lines after dropping the dependency on glibc */
-#define _GNU_SOURCE
-#include <sched.h>
-#include <unistd.h>
+// #define _GNU_SOURCE
+// #include <sched.h>
+// #include <unistd.h>
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -1167,6 +1167,7 @@ noreturn static int dummy_glibc_thread(void* arg) {
         pause();
     }
 }
+int clone(int (*fn)(void*), void* stack, int flags, void* arg);
 
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
@@ -1179,8 +1180,8 @@ int main(int argc, char* argv[], char* envp[]) {
     //todo: opisać
     ret = clone(dummy_glibc_thread, dummy_glibc_thread_stack + sizeof(dummy_glibc_thread_stack),
                 CLONE_FILES | CLONE_FS | CLONE_IO | CLONE_SIGHAND | CLONE_VM | CLONE_SYSVSEM
-                   | CLONE_THREAD,
-                /*arg=*/NULL, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
+                   | CLONE_THREAD);
+                ///*arg=*/NULL, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
     if (ret == -1) {
         log_error("Failed to create a glibc thread");
         return 1;

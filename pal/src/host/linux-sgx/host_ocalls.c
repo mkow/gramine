@@ -920,11 +920,11 @@ int start_rpc(size_t threads_cnt) {
         child_stack_top = ALIGN_DOWN_PTR(child_stack_top, 16);
 
         int dummy_parent_tid_field = 0;
-        int ret = clone(rpc_thread_loop, child_stack_top,
-                        CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM |
-                        CLONE_THREAD | CLONE_SIGHAND | CLONE_PTRACE | CLONE_PARENT_SETTID,
-                        /*arg=*/NULL, &dummy_parent_tid_field, /*tls=*/NULL, /*child_tid=*/NULL,
-                        thread_exit);
+        int ret = inline_clone(rpc_thread_loop, child_stack_top,
+                               CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM |
+                               CLONE_THREAD | CLONE_SIGHAND | CLONE_PTRACE | CLONE_PARENT_SETTID,
+                               /*arg=*/NULL, &dummy_parent_tid_field, /*tls=*/NULL,
+                               /*child_tid=*/NULL, thread_exit);
 
         if (ret < 0) {
             DO_SYSCALL(munmap, stack, RPC_STACK_SIZE);

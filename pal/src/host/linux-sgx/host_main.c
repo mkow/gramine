@@ -10,6 +10,7 @@
 // #define _GNU_SOURCE
 // #include <sched.h>
 // #include <unistd.h>
+#include <pthread.h>
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -1160,14 +1161,20 @@ static int verify_hw_requirements(char* envp[]) {
 }
 
 /* TODO: remove this hacky fix after dropping the dependency on glibc */
-static char dummy_glibc_thread_stack[0x1000];
-noreturn static int dummy_glibc_thread(void* arg) {
+// static char dummy_glibc_thread_stack[0x1000];
+// noreturn static int dummy_glibc_thread(void* arg) {
+//     __UNUSED(arg);
+//     while (1) {
+//         pause();
+//     }
+// }
+// int clone(int (*fn)(void*), void* stack, int flags, void* arg);
+noreturn static void* dummy_glibc_thread(void* arg) {
     __UNUSED(arg);
     while (1) {
         pause();
     }
 }
-int clone(int (*fn)(void*), void* stack, int flags, void* arg);
 
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
@@ -1178,12 +1185,18 @@ int main(int argc, char* argv[], char* envp[]) {
     size_t reserved_mem_ranges_size = 0;
 
     //todo: opisać
-    ret = clone(dummy_glibc_thread, dummy_glibc_thread_stack + sizeof(dummy_glibc_thread_stack),
-                CLONE_FILES | CLONE_FS | CLONE_IO | CLONE_SIGHAND | CLONE_VM | CLONE_SYSVSEM
-                   | CLONE_THREAD,
-                /*arg=*/NULL);
-                //, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
-    if (ret == -1) {
+    // ret = clone(dummy_glibc_thread, dummy_glibc_thread_stack + sizeof(dummy_glibc_thread_stack),
+    //             CLONE_FILES | CLONE_FS | CLONE_IO | CLONE_SIGHAND | CLONE_VM | CLONE_SYSVSEM
+    //                | CLONE_THREAD,
+    //             /*arg=*/NULL);
+    //             //, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
+    // if (ret == -1) {
+    //     log_error("Failed to create a glibc thread");
+    //     return 1;
+    // }
+    pthread_t glibc_thread;
+    ret = pthread_create(&glibc_thread, /*attr=*/NULL, dummy_glibc_thread, NULL);
+    if (ret != 0) {
         log_error("Failed to create a glibc thread");
         return 1;
     }

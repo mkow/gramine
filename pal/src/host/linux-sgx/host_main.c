@@ -1180,8 +1180,9 @@ int main(int argc, char* argv[], char* envp[]) {
     //todo: opisać
     ret = clone(dummy_glibc_thread, dummy_glibc_thread_stack + sizeof(dummy_glibc_thread_stack),
                 CLONE_FILES | CLONE_FS | CLONE_IO | CLONE_SIGHAND | CLONE_VM | CLONE_SYSVSEM
-                   | CLONE_THREAD);
-                ///*arg=*/NULL, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
+                   | CLONE_THREAD,
+                /*arg=*/NULL);
+                //, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL);
     if (ret == -1) {
         log_error("Failed to create a glibc thread");
         return 1;

@@ -164,10 +164,11 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     // TODO: pal_thread_init() may fail during initialization, we should check its result (but this
     // happens asynchronously, so it's not trivial to do).
-    ret = clone(pal_thread_init, child_stack,
-                CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM | CLONE_THREAD | CLONE_SIGHAND
-                | CLONE_PARENT_SETTID,
-                tcb, &hdl->thread.tid, /*tls=*/NULL, /*child_tid=*/NULL, pal_thread_exit_wrapper);
+    ret = inline_clone(pal_thread_init, child_stack,
+                       CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM | CLONE_THREAD
+                           | CLONE_SIGHAND | CLONE_PARENT_SETTID,
+                       tcb, &hdl->thread.tid, /*tls=*/NULL, /*child_tid=*/NULL,
+                       pal_thread_exit_wrapper);
 
     if (ret < 0) {
         ret = PAL_ERROR_DENIED;

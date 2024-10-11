@@ -1160,8 +1160,9 @@ static int verify_hw_requirements(char* envp[]) {
 }
 
 /* TODO: remove this hacky fix after dropping the dependency on glibc */
-char dummy_glibc_thread_stack[0x1000];
-noreturn int dummy_glibc_thread(void*) {
+static char dummy_glibc_thread_stack[0x1000];
+noreturn static int dummy_glibc_thread(void* arg) {
+    __UNUSED(arg);
     while (1) {
         pause();
     }

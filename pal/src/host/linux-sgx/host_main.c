@@ -10,7 +10,8 @@
 // #define _GNU_SOURCE
 // #include <sched.h>
 // #include <unistd.h>
-#include <pthread.h>
+// #include <pthread.h>
+#include <bits/pthreadtypes.h>
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -1175,6 +1176,8 @@ noreturn static void* dummy_glibc_thread(void* arg) {
         pause();
     }
 }
+int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void *(*start_routine)(void *),
+                   void* arg);
 
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {

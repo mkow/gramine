@@ -175,6 +175,7 @@ libpal_sgx_host = executable('loader',
         protobuf_dep,
         vtune_dep,
         dl_dep,
+        dependency('threads'),
     ],
 
     install: true,

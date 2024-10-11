@@ -28,21 +28,21 @@ do_syscall:
     ret
     .cfi_endproc
 
-.global clone
-.type clone, @function
+.global inline_clone
+.type inline_clone, @function
 .align 0x10
 /* C declaration has type:
- * long clone(int (*f)(void*),          // rdi
- *            void* stack,              // rsi
- *            int flags,                // rdx
- *            void* arg,                // rcx
- *            void* parent_tid,         // r8
- *            void* tls,                // r9
- *            void* child_tid,          // [rsp + 8]
- *            void (*exit_func)(int)    // [rsp + 0x10]
+ * long inline_clone(int (*f)(void*),          // rdi
+ *                   void* stack,              // rsi
+ *                   int flags,                // rdx
+ *                   void* arg,                // rcx
+ *                   void* parent_tid,         // r8
+ *                   void* tls,                // r9
+ *                   void* child_tid,          // [rsp + 8]
+ *                   void (*exit_func)(int)    // [rsp + 0x10]
  * );
  */
-clone:
+inline_clone:
     .cfi_startproc
     /* Pass functions and argument on the child stack. */
     sub $0x18, %rsi

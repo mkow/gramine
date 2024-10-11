@@ -411,9 +411,10 @@ int clone_thread(void* dynamic_tcs) {
     int start_status = 1;
     tcb->start_status_ptr = &start_status;
 
-    ret = clone(pal_thread_init, child_stack_top,
-                CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM | CLONE_THREAD | CLONE_SIGHAND,
-                tcb, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL, thread_exit);
+    ret = inline_clone(pal_thread_init, child_stack_top,
+                       CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM | CLONE_THREAD
+                           | CLONE_SIGHAND,
+                       tcb, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL, thread_exit);
 
     if (ret < 0) {
         DO_SYSCALL(munmap, stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);

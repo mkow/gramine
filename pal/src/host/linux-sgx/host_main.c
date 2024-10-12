@@ -11,7 +11,7 @@
 // #include <sched.h>
 // #include <unistd.h>
 // #include <pthread.h>
-#include <bits/pthreadtypes.h>
+#include <bits/pthreadtypes.h> // can't include full pthread.h, conflicts with our own types
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>

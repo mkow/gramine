@@ -11,7 +11,6 @@
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void *(*start_routine)(void *),
                    void* arg);
 int pause(void);
-int mprotect(void addr, size_t len, int prot);
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -1168,6 +1167,8 @@ noreturn static void* dummy_glibc_thread(void* arg) {
         pause();
     }
 }
+
+int mprotect(void addr, size_t len, int prot);
 
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {

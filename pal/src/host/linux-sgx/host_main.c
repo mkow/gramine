@@ -10,6 +10,8 @@
 #include <bits/pthreadtypes.h> // can't include full pthread.h, conflicts with our own types
 int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void *(*start_routine)(void *),
                    void* arg);
+int pause(void);
+int mprotect(void addr, size_t len, int prot);
 
 #include <asm/errno.h>
 #include <asm/fcntl.h>
@@ -1175,6 +1177,7 @@ int main(int argc, char* argv[], char* envp[]) {
     void* reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = 0;
 
+    extern void* stdin;
     uint8_t* stdin_addr = (uint8_t*)stdin;
     log_always("stdin_addr addr: %p", stdin_addr);
     // 0x97959: assert old_size < [...]

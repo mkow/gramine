@@ -1168,7 +1168,7 @@ noreturn static void* dummy_glibc_thread(void* arg) {
     }
 }
 
-int mprotect(void addr, size_t len, int prot);
+int mprotect(void* addr, size_t len, int prot);
 
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {

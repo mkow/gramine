@@ -18,7 +18,7 @@ pal_common_sources = files(
     'pal_threading.c',
 )
 
-# We compile both PAL loaders without libc (`-nostdlib`), hence this simple replacement.
+# We compile both PAL loaders without libc (`-nostdlib`), hence this simple substitute.
 pal_stdlib_sources = files(
     'printf.c',
     'slab.c',

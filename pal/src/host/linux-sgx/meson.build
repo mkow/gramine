@@ -82,6 +82,7 @@ libpal_sgx = shared_library('pal',
     'pal_threading.c',
     pal_sgx_asm_offsets_h,
     pal_common_sources,
+    pal_stdlib_sources,
     pal_linux_common_sources_enclave,
 
     include_directories: sgx_inc,

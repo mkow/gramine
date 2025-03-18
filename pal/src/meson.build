@@ -16,6 +16,10 @@ pal_common_sources = files(
     'pal_sockets.c',
     'pal_streams.c',
     'pal_threading.c',
+)
+
+# We compile both PAL loaders without libc (`-nostdlib`), hence this simple replacement.
+pal_stdlib_sources = files(
     'printf.c',
     'slab.c',
 )

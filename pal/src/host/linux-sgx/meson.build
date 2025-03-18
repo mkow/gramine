@@ -164,7 +164,7 @@ libpal_sgx_host = executable('loader',
 
     dependencies: [
         common_dep,
-        protobuf_dep,
+#         protobuf_dep,
         vtune_dep,
         dl_dep,
     ],

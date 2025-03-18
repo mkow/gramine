@@ -157,6 +157,7 @@ libpal_sgx_host = executable('loader',
         '-fstack-protector-strong',
     ],
     link_args: [
+        '-nostdlib',
         '-Wl,-zrelro',
         '-Wl,-znow',
     ],

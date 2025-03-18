@@ -143,7 +143,7 @@ libpal_sgx_host = executable('loader',
     'host_profile.c',
     'host_syscall.c',
     'host_thread.c',
-    pal_linux_common_sources_host,
+    pal_linux_common_sources,
     pal_sgx_asm_offsets_h,
     aesm_proto_ch,
 
